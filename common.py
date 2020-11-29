@@ -8,3 +8,13 @@ def getImagePixels(directory, fileName):
     filePath = os.path.join(directory, fileName)
     image = Image.open(filePath)
     return np.asarray(image)
+
+
+def convertToGrayscale(pixels):
+    grayscalePixels = np.zeros(shape=pixels.shape)
+    for i in range(pixels.shape[0]):
+        for j in range(pixels.shape[1]):
+            rgb = pixels[i, j]
+            gray = 0.21 * rgb[0] + 0.72 * rgb[1] + 0.07 * rgb[2]
+            grayscalePixels[i, j] = [gray, gray, gray]
+    return grayscalePixels
