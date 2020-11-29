@@ -7,11 +7,11 @@ from PIL import Image
 def getImagePixels(directory, fileName):
     filePath = os.path.join(directory, fileName)
     image = Image.open(filePath)
-    return np.asarray(image)
+    return np.array(image, dtype=np.uint8)
 
 
 def convertToGrayscale(pixels):
-    grayscalePixels = np.zeros(shape=pixels.shape)
+    grayscalePixels = np.zeros(shape=pixels.shape, dtype=np.uint8)
     for i in range(pixels.shape[0]):
         for j in range(pixels.shape[1]):
             rgb = pixels[i, j]
