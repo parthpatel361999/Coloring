@@ -5,7 +5,6 @@ from sys import maxsize
 from time import time
 
 import numpy as np
-from numpy.core.fromnumeric import shape
 from PIL import Image
 
 from common import convertToGrayscale, getImagePixels
@@ -58,18 +57,25 @@ def basicAgent(originalPixels, grayscalePixels):
                 rightRecoloredPixels[r][c] = np.array(
                     [0, 0, 0], dtype=np.uint8)
                 continue
+            startTime = time()
             rightGrayscaleSection = getSection(r, c, rightGrayscalePixels)
             mostSimilarSections = PriorityQueue()
+            itemsOnQueue = 0
+            thresholdMSE = maxsize
             for s in range(len(leftGrayscaleSections)):
                 leftGrayscaleSection = leftGrayscaleSections[s]
                 distances = []
                 for i in range((len(rightGrayscaleSection))):
                     distances.append(colorDistance(
                         rightGrayscaleSection[i], leftGrayscaleSection[i])**2)
-                meanSquareError = sqrt(sum(distances))
+                mse = sqrt(sum(distances))
                 representativeColor = leftPixels[leftGrayscaleSectionsCoords[s]]
-                mostSimilarSections.put(Comparison(
-                    meanSquareError, representativeColor))
+                if itemsOnQueue < grayscaleComparisons or thresholdMSE > mse:
+                    mostSimilarSections.put(Comparison(
+                        mse, representativeColor))
+                    itemsOnQueue += 1
+                    if thresholdMSE > mse:
+                        thresholdMSE = mse
 
             topComparisons = []
             for _ in range(grayscaleComparisons):
@@ -90,6 +96,8 @@ def basicAgent(originalPixels, grayscalePixels):
             if calculatedColor is None:
                 calculatedColor = topComparisons[0].color
             rightRecoloredPixels[r][c] = calculatedColor
+            print("Color Calculation (" + str(r) + "," + str(c) + "):",
+                  time() - startTime, "seconds")
 
     rightRecoloredPixels = np.array(rightRecoloredPixels, dtype=np.uint8)
     recalculatedImageArray = np.hstack(
@@ -119,11 +127,10 @@ def kMeans(pixels, k, distance=colorDistance):
     centers = []
     clusters = [[] for i in range(k)]
 
-    maxIterations = 10
+    centersHaveChanged = True
     iteration = 0
 
-    while iteration < maxIterations:
-
+    while centersHaveChanged:
         startTime = time()
 
         if firstIteration:
@@ -146,6 +153,9 @@ def kMeans(pixels, k, distance=colorDistance):
                 centers.append(center)
             firstIteration = False
         else:
+            centerChanges = set()
+            centersHaveChanged = False
+
             for i in range(k):
                 cluster = clusters[i]
                 rgbSum = [0, 0, 0]
@@ -154,26 +164,37 @@ def kMeans(pixels, k, distance=colorDistance):
                     rgbSum[0] += pixelRGB[0]
                     rgbSum[1] += pixelRGB[1]
                     rgbSum[2] += pixelRGB[2]
-                centers[i] = np.array([rgbSum[0] /
-                                       len(cluster), rgbSum[1] / len(cluster), rgbSum[2] / len(cluster)], dtype=np.uint8)
+                newCenter = np.array([rgbSum[0] /
+                                      len(cluster), rgbSum[1] / len(cluster), rgbSum[2] / len(cluster)], dtype=np.uint8)
+                # print(colorDistance(newCenter, centers[i]))
+                centerChanges.add(colorDistance(newCenter, centers[i]))
+                centers[i] = newCenter
+
+            for change in centerChanges:
+                if change != 0.0:
+                    centersHaveChanged = True
+                    break
+
+        if centersHaveChanged:
+            for i in range(k):
                 clusters[i] = []
 
-        for r in range(pixels.shape[0]):
-            for c in range(pixels.shape[1]):
-                minDistance = maxsize
-                minClusterIndex = 0
-                pixelRGB = pixels[r, c]
-                for i in range(k):
-                    pixelCenterDistance = distance(
-                        centers[i], pixelRGB)
-                    if pixelCenterDistance < minDistance:
-                        minDistance = pixelCenterDistance
-                        minClusterIndex = i
-                clusters[minClusterIndex].append((r, c))
+            for r in range(pixels.shape[0]):
+                for c in range(pixels.shape[1]):
+                    minDistance = maxsize
+                    minClusterIndex = 0
+                    pixelRGB = pixels[r, c]
+                    for i in range(k):
+                        pixelCenterDistance = distance(
+                            centers[i], pixelRGB)
+                        if pixelCenterDistance < minDistance:
+                            minDistance = pixelCenterDistance
+                            minClusterIndex = i
+                    clusters[minClusterIndex].append((r, c))
 
-        print("Iteration", str(iteration) + ":",
-              str(time() - startTime), "seconds")
-        iteration += 1
+            print("K-Means Iteration", str(iteration) + ":",
+                  str(time() - startTime), "seconds")
+            iteration += 1
 
     return centers, clusters
 
