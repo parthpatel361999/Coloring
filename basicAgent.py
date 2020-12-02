@@ -5,6 +5,7 @@ from sys import maxsize
 from time import time
 
 import numpy as np
+from numpy.core.fromnumeric import shape
 from PIL import Image
 
 from common import convertToGrayscale, getImagePixels
@@ -34,19 +35,9 @@ def basicAgent(originalPixels, grayscalePixels):
             else:
                 leftRecoloredPixels[r][c] = representativeColors[i]
     leftRecoloredPixels = np.array(leftRecoloredPixels, dtype=np.uint8)
-    # image = Image.fromarray(leftPixels)
-    # image.save("test.jpg")
-
-    leftGrayscaleSections = []
-    leftGrayscaleSectionsCoords = []
-    for r in range(1, leftGrayscalePixels.shape[0] - 1):
-        for c in range(1, leftGrayscalePixels.shape[1] - 1):
-            leftGrayscaleSections.append(
-                getSection(r, c, leftGrayscalePixels))
-            leftGrayscaleSectionsCoords.append((r, c))
-    leftGrayscaleSections = np.array(leftGrayscaleSections, dtype=np.uint8)
 
     grayscaleComparisons = 6
+    randomSampleSize = 10000
     rightGrayscalePixels = grayscalePixels[:, int(
         grayscalePixels.shape[1] / 2):]
     rightRecoloredPixels = [
@@ -60,16 +51,23 @@ def basicAgent(originalPixels, grayscalePixels):
             startTime = time()
             rightGrayscaleSection = getSection(r, c, rightGrayscalePixels)
             mostSimilarSections = PriorityQueue()
+            leftGrayscaleSectionsCenters = set()
+            while len(leftGrayscaleSectionsCenters) < randomSampleSize:
+                leftGrayscaleSectionsCenters.add((randint(
+                    1, leftGrayscalePixels.shape[0] - 2), randint(1, leftGrayscalePixels.shape[1] - 2)))
             itemsOnQueue = 0
             thresholdMSE = maxsize
-            for s in range(len(leftGrayscaleSections)):
-                leftGrayscaleSection = leftGrayscaleSections[s]
+            for sR, sC in leftGrayscaleSectionsCenters:
+                leftGrayscaleSection = getSection(sR, sC, leftGrayscalePixels)
+                # leftGrayscaleSection = leftGrayscaleSections[s]
                 distances = []
                 for i in range((len(rightGrayscaleSection))):
                     distances.append(colorDistance(
                         rightGrayscaleSection[i], leftGrayscaleSection[i])**2)
-                mse = sqrt(sum(distances))
-                representativeColor = leftPixels[leftGrayscaleSectionsCoords[s]]
+                # mse = sqrt(sum(distances))
+                mse = sum(distances)
+                representativeColor = leftRecoloredPixels[sR, sC]
+                # mostSimilarSections.put(Comparison(mse, representativeColor))
                 if itemsOnQueue < grayscaleComparisons or thresholdMSE > mse:
                     mostSimilarSections.put(Comparison(
                         mse, representativeColor))
@@ -100,8 +98,16 @@ def basicAgent(originalPixels, grayscalePixels):
                   time() - startTime, "seconds")
 
     rightRecoloredPixels = np.array(rightRecoloredPixels, dtype=np.uint8)
-    recalculatedImageArray = np.hstack(
-        (leftPixels, rightRecoloredPixels))
+
+    recalculatedImageArray = [[[] for j in range(originalPixels.shape[1])]
+                              for i in range(originalPixels.shape[0])]
+    for r in range(len(recalculatedImageArray)):
+        for c in range(leftRecoloredPixels.shape[1]):
+            recalculatedImageArray[r][c] = leftRecoloredPixels[r][c]
+        for c in range(rightRecoloredPixels.shape[1]):
+            recalculatedImageArray[r][c + leftRecoloredPixels.shape[1]
+                                      ] = rightRecoloredPixels[r][c]
+    recalculatedImageArray = np.array(recalculatedImageArray, dtype=np.uint8)
     image = Image.fromarray(recalculatedImageArray)
     image.save("basic-agent-results.png")
 
