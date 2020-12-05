@@ -1,4 +1,3 @@
-from math import sqrt
 from queue import PriorityQueue
 from random import randint
 from sys import maxsize
@@ -8,7 +7,7 @@ import numpy as np
 from numpy.core.fromnumeric import shape
 from PIL import Image
 
-from common import convertToGrayscale, getImagePixels
+from common import convertToGrayscale, getImagePixels, colorDistance, checkQuality
 
 
 class Comparison:
@@ -121,13 +120,6 @@ def getSection(r, c, pixels):
         section.append(pixels[nR, nC])
     return np.array(section, dtype=np.uint8)
 
-
-def colorDistance(color1, color2):
-    intColor1 = np.array(color1, dtype=int)
-    intColor2 = np.array(color2, dtype=int)
-    return sqrt(2 * (intColor1[0] - intColor2[0])**2 + 4 * (intColor1[1] - intColor2[1])**2 + 3 * (intColor1[2] - intColor2[2])**2)
-
-
 def kMeans(pixels, k, distance=colorDistance):
     firstIteration = True
     centers = []
@@ -208,3 +200,5 @@ def kMeans(pixels, k, distance=colorDistance):
 if __name__ == "__main__":
     originalPixels = getImagePixels("training", "fuji.jpg")
     basicAgent(originalPixels, convertToGrayscale(originalPixels))
+
+    #print(checkQuality("training", "fuji.jpg", "", "basic-agent-results.png"))
