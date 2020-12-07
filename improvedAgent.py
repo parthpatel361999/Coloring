@@ -61,24 +61,25 @@ class NeuralNetwork:
             outputLayer.append(outputNode)
         self.network.append(outputLayer)
 
-    def initalizeWeights(currNodes, prevNodes):
-        return np.random.randn(currNodes, prevNodes) * np.sqrt(2 / prevNodes)
+    def initalizeWeights(currNodes, prevNodes) -> float:
+        return np.random.randn(currNodes, prevNodes) * np.sqrt(2 / prevNodes)  # He initialization
 
-    def forwardPropagate(self, inputs):
-        self.inputs = inputs
+    def forwardPropagate(self, inputs) -> list:
+        self.inputs = inputs  # Needed for backward propagation
         currLayerInputs = inputs
         for layer in self.network:
             nextLayerInputs = []
             for node in layer:
-                output = node[self.WEIGHTS][0]
+                output = node[self.WEIGHTS][0]  # Output starts at bias value
                 for i in range(1, node[self.WEIGHTS]):
+                    # Dot product between weights and current inputs
                     output += node[self.WEIGHTS][i] * currLayerInputs[i]
                 node[self.OUTPUT] = self.activationFunction(output)
                 nextLayerInputs.append(node[self.OUTPUT])
-            currLayerInputs = nextLayerInputs
-        return currLayerInputs
+            currLayerInputs = nextLayerInputs  # Prep next layer's inputs
+        return currLayerInputs  # Returns the last layer's outputs
 
-    def backwardPropagate(self, expected):
+    def backwardPropagate(self, expected) -> None:
         factors = []
         for l in reversed(range(len(self.network))):  # For each layer L in the network
             # Needed for all layers besides last (every such layer needs dL / dI_n for every node in the next layer)
@@ -100,8 +101,8 @@ class NeuralNetwork:
                     newFactors.append(activationDerivative * sumProduct)  # dO_n / dI_n * dL / dO_n = dL / dO_n
                 for w in range(len(node[self.WEIGHTS])):
                     gradient = baseGradient
-                    if w != 0:
+                    if w != 0:  # Don't do anything if this weight is the bias
                         gradient *= self.network[l - 1][w -
                                                         1][self.OUTPUT] if l != 0 else self.inputs[w - 1]  # AKA dI_n / dw
-                    node[self.WEIGHTS][w] -= self.learningRate * gradient  # update weight
+                    node[self.WEIGHTS][w] -= self.learningRate * gradient  # Update weight
             factors = newFactors
