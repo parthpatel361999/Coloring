@@ -38,41 +38,70 @@ class NeuralNetwork:
     OUTPUT = "output"
     ERROR = "error"
 
-    def __init__(self, trainingData, percentValidation=0.9, numLayers=5, numFilters=10, activationFunction=sigmoid, learningRate=0.1) -> None:
-        self.trainingData = trainingData[:, :int(trainingData.shape[1] * percentValidation)]
-        self.validationData = trainingData[:, int(trainingData.shape[1] * percentValidation):]
-        self.numLayers = numLayers
-        self.numFilters = numFilters
+    def __init__(self, nodeCounts, activationFunction=sigmoid, learningRate=0.1) -> None:
         self.activationFunction = activationFunction
         self.activationDerivative = self.ACTIVATION_DERIVATIVES[activationFunction.__name__]
         self.learningRate = learningRate
 
-        self.network = []
-        rowsLimit = self.trainingData.shape[0] - 1
-        colsLimit = self.trainingData.shape[1] - 1
         np.random.seed(0)
-        for l in range(self.numLayers):
+        self.network = []
+        for l in range(nodeCounts):
             layer = []
-
-            for f in range(self.numFilters):
-                layerFilter = []
-                weights = np.random.randn(self.numFilters, self.PATCH_DIM**2 + 1) * np.sqrt(2 / (self.PATCH_DIM**2 + 1)
-                                                                                            ) if l == 0 else np.random.randn(self.numFilters, self.numFilters)*np.sqrt(2 / (self.numFilters))
-                for r in range(1, rowsLimit):
-                    for c in range(1, colsLimit):
-                        node = {}
-                        node[self.WEIGHTS] = weights[weights.shape[0] * (r - 1) + (c - 1)]
-                        layerFilter.append(node)
-
-                layer.append(layerFilter)
-
+            weights = self.initalizeWeights(nodeCounts[l], self.PATCH_DIM**2 + 1 if l == 0 else nodeCounts[l - 1] + 1)
+            for n in range(nodeCounts[l]):
+                node = {self.WEIGHTS: weights[n]}
+                layer.append(node)
             self.network.append(layer)
-            if l != numLayers - 1:
-                rowsLimit = max(rowsLimit - 2, self.PATCH_DIM)
-                colsLimit = max(colsLimit - 2, self.PATCH_DIM)
 
-        numHiddenLayerNodes = (rowsLimit - 1) * (colsLimit - 1) * self.numFilters + 1
-        numFinalNodes = 3
-        outputLayer = [{self.WEIGHTS: np.random.randn(
-            numFinalNodes, numHiddenLayerNodes)*np.sqrt(2 / (numHiddenLayerNodes))} for i in range(numFinalNodes)]
+        outputNodeCount = 3
+        outputLayer = []
+        outputWeights = self.initalizeWeights(outputNodeCount, nodeCounts[-1] + 1)
+        for n in range(outputNodeCount):
+            outputNode = {self.WEIGHTS: outputWeights[n]}
+            outputLayer.append(outputNode)
         self.network.append(outputLayer)
+
+    def initalizeWeights(currNodes, prevNodes):
+        return np.random.randn(currNodes, prevNodes) * np.sqrt(2 / prevNodes)
+
+    def forwardPropagate(self, inputs):
+        self.inputs = inputs
+        currLayerInputs = inputs
+        for layer in self.network:
+            nextLayerInputs = []
+            for node in layer:
+                output = node[self.WEIGHTS][0]
+                for i in range(1, node[self.WEIGHTS]):
+                    output += node[self.WEIGHTS][i] * currLayerInputs[i]
+                node[self.OUTPUT] = self.activationFunction(output)
+                nextLayerInputs.append(node[self.OUTPUT])
+            currLayerInputs = nextLayerInputs
+        return currLayerInputs
+
+    def backwardPropagate(self, expected):
+        factors = []
+        for l in reversed(range(len(self.network))):  # For each layer L in the network
+            # Needed for all layers besides last (every such layer needs dL / dI_n for every node in the next layer)
+            newFactors = []
+            for n in range(len(self.network[l])):  # For each node N in L
+                node = self.network[l][n]
+                activationDerivative = self.activationDerivative(node[self.OUTPUT])  # AKA dO_n / dI_n
+                baseGradient = activationDerivative  # Set gradient to activation function derivative of current node's output value
+                if l == len(self.network) - 1:  # If L is the last layer in the network
+                    lossFunctionDerivative = 2 * (node[self.OUTPUT] - expected[n])  # AKA dL / dO_n
+                    baseGradient *= lossFunctionDerivative  # Multiply gradient by loss function derivative
+                    # dO_n / dI_n * dL / dO_n = dL / dO_n
+                    newFactors.append(activationDerivative * lossFunctionDerivative)
+                else:
+                    sumProduct = 0  # AKA dL / dO_n
+                    for _n in range(len(self.network[l + 1])):
+                        sumProduct += self.network[l + 1][_n][self.WEIGHTS][n] * factors[_n]
+                    baseGradient *= sumProduct
+                    newFactors.append(activationDerivative * sumProduct)  # dO_n / dI_n * dL / dO_n = dL / dO_n
+                for w in range(len(node[self.WEIGHTS])):
+                    gradient = baseGradient
+                    if w != 0:
+                        gradient *= self.network[l - 1][w -
+                                                        1][self.OUTPUT] if l != 0 else self.inputs[w - 1]  # AKA dI_n / dw
+                    node[self.WEIGHTS][w] -= self.learningRate * gradient  # update weight
+            factors = newFactors
