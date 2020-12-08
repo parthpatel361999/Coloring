@@ -201,4 +201,6 @@ if __name__ == "__main__":
     originalPixels = getImagePixels("training", "fuji.jpg")
     basicAgent(originalPixels, convertToGrayscale(originalPixels))
 
-    #print(checkQuality("training", "fuji.jpg", "", "basic-agent-results.png"))
+    # op = getImagePixels("training", "fuji.jpg")
+    # np = getImagePixels("", "basic-agent-results.png")
+    # print(checkQuality(op, np))

@@ -23,18 +23,25 @@ def colorDistance(color1, color2):
     return sqrt(2 * (intColor1[0] - intColor2[0])**2 + 4 * (intColor1[1] - intColor2[1])**2 + 3 * (intColor1[2] - intColor2[2])**2)
 
 # Returns the total color distance between two images divided by the number of pixels. (Only uses the right half)
-def checkQuality(originalDirectory, originalFileName, newDirectory, newFileName):
-    originalPixels = getImagePixels(originalDirectory, originalFileName)
-    newPixels = getImagePixels(newDirectory, newFileName)
+def checkQuality(originalPixels, newPixels):
+    leftOriginalPixels = originalPixels[:, :int(originalPixels.shape[1] / 2)]
+    leftNewPixels = newPixels[:, :int(newPixels.shape[1] / 2)] 
     rightOriginalPixels = originalPixels[:, int(originalPixels.shape[1] / 2):]
     rightNewPixels = newPixels[:, int(newPixels.shape[1] / 2):]
-    totalDistance = 0
-    numPixels = 0
-
+    totalDistanceL = 0
+    numPixelsL = 0
+    totalDistanceR = 0
+    numPixelsR = 0
+    for r in range(leftOriginalPixels.shape[0]):
+        for c in range(leftOriginalPixels.shape[1]):
+            if r == 0 or r == leftOriginalPixels.shape[0] - 1 or c == 0 or c == leftOriginalPixels.shape[1] - 1:
+                continue
+            totalDistanceL += colorDistance(leftOriginalPixels[r, c], leftNewPixels[r, c])
+            numPixelsL += 1
     for r in range(rightOriginalPixels.shape[0]):
         for c in range(rightOriginalPixels.shape[1]):
             if r == 0 or r == rightOriginalPixels.shape[0] - 1 or c == 0 or c == rightOriginalPixels.shape[1] - 1:
                 continue
-            totalDistance += colorDistance(rightOriginalPixels[r, c], rightNewPixels[r, c])
-            numPixels += 1
-    return totalDistance/numPixels
+            totalDistanceR += colorDistance(rightOriginalPixels[r, c], rightNewPixels[r, c])
+            numPixelsR += 1
+    return totalDistanceL/numPixelsL, totalDistanceR/numPixelsR
