@@ -38,8 +38,7 @@ class NeuralNetwork:
 
     COLOR_IMPORTANCES = [2, 4, 3]
 
-    INPUT_SIZE = 12
-    OUTPUT_SIZE = 3
+    INPUT_SIZE = 11
 
     WEIGHTS = "weights"
     OUTPUT = "output"
@@ -60,9 +59,10 @@ class NeuralNetwork:
                 layer.append(node)
             self.network.append(layer)
 
+        outputNodeCount = 1
         outputLayer = []
-        outputWeights = self.initalizeWeights(self.OUTPUT_SIZE, nodeCounts[-1] + 1)
-        for n in range(self.OUTPUT_SIZE):
+        outputWeights = self.initalizeWeights(outputNodeCount, nodeCounts[-1] + 1)
+        for n in range(outputNodeCount):
             outputNode = {self.WEIGHTS: outputWeights[n]}
             outputLayer.append(outputNode)
         self.network.append(outputLayer)
@@ -70,12 +70,12 @@ class NeuralNetwork:
     def initalizeWeights(self, currNodes, prevNodes) -> float:
         return np.random.randn(currNodes, prevNodes) * np.sqrt(2 / prevNodes)  # He initialization
 
-    def forwardPropagate(self, inputs, noChange=False) -> list:
-        if not noChange:
+    def forwardPropagate(self, inputs, validating=False) -> list:
+        if not validating:
             self.inputs = inputs  # Needed for backward propagation
 
         currLayerInputs = inputs
-        forwardPropNetwork = deepcopy(self.network) if noChange else self.network
+        forwardPropNetwork = deepcopy(self.network) if validating else self.network
         for l in range(len(forwardPropNetwork)):
             nextLayerInputs = []
             for node in forwardPropNetwork[l]:
@@ -92,7 +92,7 @@ class NeuralNetwork:
             currLayerInputs = nextLayerInputs  # Prep next layer's inputs
         return currLayerInputs  # Returns the last layer's outputs
 
-    def backwardPropagate(self, expected) -> None:
+    def backwardPropagate(self, expected, lastLayerScalar=1) -> None:
         if self.inputs.size == 0:  # Need to have forward propagated first
             return
 
@@ -105,7 +105,7 @@ class NeuralNetwork:
                 baseGradient = 1  # Set gradient to activation function derivative of current node's output value
                 if l == len(self.network) - 1:  # If L is the last layer in the network
                     # AKA dL / dO_n
-                    lossFunctionDerivative = 2 * (node[self.OUTPUT] - expected[n]) * self.COLOR_IMPORTANCES[n]
+                    lossFunctionDerivative = 2 * (node[self.OUTPUT] - expected[n]) * lastLayerScalar
                     # Multiply gradient by loss function derivative
                     baseGradient *= lossFunctionDerivative * sigmoidDerivative(node[self.OUTPUT])
                     # dO_n / dI_n * dL / dO_n = dL / dO_n
@@ -123,11 +123,15 @@ class NeuralNetwork:
                     node[self.WEIGHTS][w] -= self.learningRate * gradient  # Update weight
             factors = newFactors
 
-    def train(self, trainingData, validationData, smoothingFactor=200, minEpochs=4000) -> None:
-        trainingInputs = trainingData[0].reshape(-1, self.INPUT_SIZE)
-        trainingExpected = trainingData[1].reshape(-1, self.OUTPUT_SIZE)
-        validationInputs = validationData[0].reshape(-1, self.INPUT_SIZE)
-        validationExpected = validationData[1].reshape(-1, self.OUTPUT_SIZE)
+    def train(self, trainingInputs, trainingExpected, errorScalar=1, smoothingFactor=200, validationPercent=0.1, minEpochs=4000) -> None:
+        trainingInputData = trainingInputs[:, : int(
+            trainingInputs.shape[1] * (1 - validationPercent))].reshape(-1, self.INPUT_SIZE)
+        validationInputData = trainingInputs[:,  int(
+            trainingInputs.shape[1] * (1 - validationPercent)):].reshape(-1, self.INPUT_SIZE)
+        trainingExpectedData = trainingExpected[:, :
+                                                int(trainingExpected.shape[1] * (1 - validationPercent))].reshape(-1, 1)
+        validationExpectedData = trainingExpected[:,
+                                                  int(trainingExpected.shape[1] * (1 - validationPercent)):].reshape(-1, 1)
         trainingErrors = []
         validationErrors = []
 
@@ -136,35 +140,22 @@ class NeuralNetwork:
         minValidationErrorEpoch = epoch
         networks = []
 
-        prevTrainingIndices = set()
-        prevValidationIndices = set()
-
         seed(0)
         while epoch < minEpochs or validationImproving:
             print("EPOCH", str(epoch))
 
-            stochasticIndex = randint(0, len(trainingInputs) - 1)
-            while stochasticIndex in prevTrainingIndices:
-                stochasticIndex = randint(0, len(trainingInputs) - 1)
-            prevTrainingIndices.add(stochasticIndex)
-            if len(prevTrainingIndices) >= len(trainingInputs):
-                prevTrainingIndices = set()
-            trainingOutputs = self.forwardPropagate(trainingInputs[stochasticIndex])
-            self.backwardPropagate(trainingExpected[stochasticIndex])
+            stochasticIndex = randint(0, len(trainingInputData) - 1)
+            trainingOutputs = self.forwardPropagate(trainingInputData[stochasticIndex])
+            self.backwardPropagate(trainingExpectedData[stochasticIndex], errorScalar)
             scaledTrainingOutputs = 255 * np.array(trainingOutputs)
-            scaledTrainingExpected = 255 * np.array(trainingExpected[stochasticIndex])
-            trainingErrors.append(colorDistance(scaledTrainingOutputs, scaledTrainingExpected))
+            scaledTrainingExpected = 255 * np.array(trainingExpectedData[stochasticIndex])
+            trainingErrors.append(sqrt(errorScalar * (scaledTrainingOutputs[0] - scaledTrainingExpected[0])**2))
 
-            stochasticIndex = randint(0, len(validationInputs) - 1)
-            while stochasticIndex in prevValidationIndices:
-                stochasticIndex = randint(0, len(validationInputs) - 1)
-            prevValidationIndices.add(stochasticIndex)
-            if len(prevValidationIndices) >= len(validationInputs):
-                prevValidationIndices = set()
-            validationOutputs = self.forwardPropagate(validationInputs[stochasticIndex], True)
+            stochasticIndex = randint(0, len(validationInputData) - 1)
+            validationOutputs = self.forwardPropagate(validationInputData[stochasticIndex], True)
             scaledValidationOutputs = 255 * np.array(validationOutputs)
-            scaledValidationExpected = 255 * np.array(validationExpected[stochasticIndex])
-            validationError = colorDistance(scaledValidationOutputs, scaledValidationExpected)
+            scaledValidationExpected = 255 * np.array(validationExpectedData[stochasticIndex])
+            validationError = sqrt(errorScalar * (scaledValidationOutputs[0] - scaledValidationExpected[0])**2)
             validationErrors.append(validationError)
 
             networks.append(deepcopy(self.network))
@@ -187,74 +178,80 @@ def improvedAgent(originalPixels, grayscalePixels):
     leftPixels = originalPixels[:, :int(originalPixels.shape[1] / 2)]
     leftGrayscalePixels = grayscalePixels[:, :int(originalPixels.shape[1] / 2)]
 
-    validationPortion = 0.1
-    trainingInputPixels = leftGrayscalePixels[:, :int(leftGrayscalePixels.shape[1] * (1 - validationPortion))]
-    trainingExpectedPixels = leftPixels[:, :int(leftPixels.shape[1] * (1 - validationPortion))]
     trainingInputs = []
-    trainingExpected = []
-    for r in range(1, trainingInputPixels.shape[0] - 1):
+    redTrainingExpected = []
+    greenTrainingExpected = []
+    blueTrainingExpected = []
+    for r in range(1, leftGrayscalePixels.shape[0] - 1):
         trainingInputsRow = []
-        trainingExpectedRow = []
-        for c in range(1, trainingInputPixels.shape[1] - 1):
-            quadrant = 2
-            if r > int(trainingInputPixels.shape[0] / 2) and c > int(trainingInputPixels.shape[1] / 2):
-                quadrant = 4
-            elif r > int(trainingInputPixels.shape[0] / 2):
-                quadrant = 3
-            elif c > int(trainingInputPixels.shape[1] / 2):
-                quadrant = 1
-            section = np.append(getSection(r, c, trainingInputPixels, True), np.array(
-                [int(trainingInputPixels.shape[0] / 2) % r, int(trainingInputPixels.shape[1] / 2) % c, quadrant]))
+        redTrainingExpectedRow = []
+        greenTrainingExpectedRow = []
+        blueTrainingExpectedRow = []
+        for c in range(1, leftGrayscalePixels.shape[1] - 1):
+            section = np.append(getSection(r, c, leftGrayscalePixels, True), np.array([r, c]))
             trainingInputsRow.append(section)
-            trainingExpectedRow.append(trainingExpectedPixels[r, c])
+            redTrainingExpectedRow.append([leftPixels[r, c][0]])
+            greenTrainingExpectedRow.append([leftPixels[r, c][1]])
+            blueTrainingExpectedRow.append([leftPixels[r, c][2]])
         trainingInputs.append(trainingInputsRow)
-        trainingExpected.append(trainingExpectedRow)
+        redTrainingExpected.append(redTrainingExpectedRow)
+        greenTrainingExpected.append(greenTrainingExpectedRow)
+        blueTrainingExpected.append(blueTrainingExpectedRow)
     trainingInputs = np.array(trainingInputs) / 255.0
-    trainingExpected = np.array(trainingExpected) / 255.0
+    redTrainingExpected = np.array(redTrainingExpected) / 255.0
+    greenTrainingExpected = np.array(greenTrainingExpected) / 255.0
+    blueTrainingExpected = np.array(blueTrainingExpected) / 255.0
 
-    validationInputPixels = leftGrayscalePixels[:, int(leftGrayscalePixels.shape[1] * (1 - validationPortion)):]
-    validationExpectedPixels = leftPixels[:, int(leftPixels.shape[1] * (1 - validationPortion)):]
-    validationInputs = []
-    validationExpected = []
-    for r in range(1, validationInputPixels.shape[0] - 1):
-        validationInputsRow = []
-        validationExpectedRow = []
-        for c in range(1, validationInputPixels.shape[1] - 1):
-            quadrant = 2
-            if r > int(validationInputPixels.shape[0] / 2) and c > int(validationInputPixels.shape[1] / 2):
-                quadrant = 4
-            elif r > int(validationInputPixels.shape[0] / 2):
-                quadrant = 3
-            elif c > int(validationInputPixels.shape[1] / 2):
-                quadrant = 1
-            section = np.append(getSection(r, c, validationInputPixels, True), np.array(
-                [int(validationInputPixels.shape[0] / 2) % r, int(validationInputPixels.shape[1] / 2) % c, quadrant]))
-            validationInputsRow.append(section)
-            validationExpectedRow.append(validationExpectedPixels[r, c])
-        validationInputs.append(validationInputsRow)
-        validationExpected.append(validationExpectedRow)
-    validationInputs = np.array(validationInputs) / 255.0
-    validationExpected = np.array(validationExpected) / 255.0
-
-    nodeCounts = [50, 50, 50, 50]
+    nodeCounts = [20, 30, 20]
     minEpochs = 30000
     smoothingFactor = int(minEpochs / 15)
-    network = NeuralNetwork(nodeCounts)
-    trainingErrors, validationErrors, minValidationError = network.train(
-        (trainingInputs, trainingExpected), (validationInputs, validationExpected),
-        minEpochs=minEpochs, smoothingFactor=smoothingFactor)
 
-    x = np.arange(0, len(trainingErrors))
-    trainingErrorsSmooth = gaussian_filter1d(trainingErrors, smoothingFactor)
-    validationErrorsSmooth = gaussian_filter1d(validationErrors, smoothingFactor)
+    redNetwork = NeuralNetwork(nodeCounts)
+    redTrainingErrors, redValidationErrors, redMinValidationError = redNetwork.train(
+        trainingInputs, redTrainingExpected, errorScalar=2, minEpochs=minEpochs, smoothingFactor=smoothingFactor)
+    x = np.arange(0, len(redTrainingErrors))
+    redTrainingErrorsSmooth = gaussian_filter1d(redTrainingErrors, smoothingFactor)
+    redValidationErrorsSmooth = gaussian_filter1d(redValidationErrors, smoothingFactor)
     figure = plt.figure(figsize=((20., 8.)))
-    plt.scatter(x, trainingErrors, s=1, color="blue")
-    plt.scatter(x, validationErrors, s=1, color="red")
-    plt.plot(x, trainingErrorsSmooth, color="green", label="Training Error", linewidth=3)
-    plt.plot(x, validationErrorsSmooth, color="gold", label="Validation Error", linewidth=3)
-    plt.axvline(x=minValidationError, color='k', label="Validation Error Minimum")
+    plt.scatter(x, redTrainingErrors, s=1, color="blue")
+    plt.scatter(x, redValidationErrors, s=1, color="red")
+    plt.plot(x, redTrainingErrorsSmooth, color="green", label="Training Error", linewidth=3)
+    plt.plot(x, redValidationErrorsSmooth, color="gold", label="Validation Error", linewidth=3)
+    plt.axvline(x=redMinValidationError, color='k', label="Validation Error Minimum")
     plt.legend(loc="best")
-    plt.savefig("training-validation-stats.png")
+    plt.savefig("red-training-validation-stats.png")
+    plt.close(figure)
+
+    greenNetwork = NeuralNetwork(nodeCounts)
+    greenTrainingErrors, greenValidationErrors, greenMinValidationError = greenNetwork.train(
+        trainingInputs, greenTrainingExpected, errorScalar=4, minEpochs=minEpochs, smoothingFactor=smoothingFactor)
+    x = np.arange(0, len(greenTrainingErrors))
+    greenTrainingErrorsSmooth = gaussian_filter1d(greenTrainingErrors, smoothingFactor)
+    greenValidationErrorsSmooth = gaussian_filter1d(greenValidationErrors, smoothingFactor)
+    figure = plt.figure(figsize=((20., 8.)))
+    plt.scatter(x, greenTrainingErrors, s=1, color="blue")
+    plt.scatter(x, greenValidationErrors, s=1, color="red")
+    plt.plot(x, greenTrainingErrorsSmooth, color="green", label="Training Error", linewidth=3)
+    plt.plot(x, greenValidationErrorsSmooth, color="gold", label="Validation Error", linewidth=3)
+    plt.axvline(x=greenMinValidationError, color='k', label="Validation Error Minimum")
+    plt.legend(loc="best")
+    plt.savefig("green-training-validation-stats.png")
+    plt.close(figure)
+
+    blueNetwork = NeuralNetwork(nodeCounts)
+    blueTrainingErrors, blueValidationErrors, blueMinValidationError = blueNetwork.train(
+        trainingInputs, blueTrainingExpected, errorScalar=3, minEpochs=minEpochs, smoothingFactor=smoothingFactor)
+    x = np.arange(0, len(blueTrainingErrors))
+    blueTrainingErrorsSmooth = gaussian_filter1d(blueTrainingErrors, smoothingFactor)
+    figure = plt.figure(figsize=((20., 8.)))
+    blueValidationErrorsSmooth = gaussian_filter1d(blueValidationErrors, smoothingFactor)
+    plt.scatter(x, blueTrainingErrors, s=1, color="blue")
+    plt.scatter(x, blueValidationErrors, s=1, color="red")
+    plt.plot(x, blueTrainingErrorsSmooth, color="green", label="Training Error", linewidth=3)
+    plt.plot(x, blueValidationErrorsSmooth, color="gold", label="Validation Error", linewidth=3)
+    plt.axvline(x=blueMinValidationError, color='k', label="Validation Error Minimum")
+    plt.legend(loc="best")
+    plt.savefig("blue-training-validation-stats.png")
     plt.close(figure)
 
     leftRecoloredPixels = [[[] for j in range(leftPixels.shape[1])] for i in range(leftPixels.shape[0])]
@@ -263,20 +260,14 @@ def improvedAgent(originalPixels, grayscalePixels):
             if r == 0 or r == leftPixels.shape[0] - 1 or c == 0 or c == leftPixels.shape[1] - 1:
                 leftRecoloredPixels[r][c] = np.array([0, 0, 0], dtype=np.uint8)
                 continue
-            quadrant = 2
-            if r > int(leftGrayscalePixels.shape[0] / 2) and c > int(leftGrayscalePixels.shape[1] / 2):
-                quadrant = 4
-            elif r > int(leftGrayscalePixels.shape[0] / 2):
-                quadrant = 3
-            elif c > int(leftGrayscalePixels.shape[1] / 2):
-                quadrant = 1
-            section = np.append(getSection(r, c, leftGrayscalePixels, True), np.array(
-                [int(leftGrayscalePixels.shape[0] / 2) % r, int(leftGrayscalePixels.shape[1] / 2) % c, quadrant]))
-            output = 255 * np.array(network.forwardPropagate(section, True))
+            section = np.append(getSection(r, c, leftGrayscalePixels, True), np.array([r, c]))
+            redOutput = 255 * np.array(redNetwork.forwardPropagate(section))
+            greenOutput = 255 * np.array(greenNetwork.forwardPropagate(section))
+            blueOutput = 255 * np.array(blueNetwork.forwardPropagate(section))
             # print(np.array(outputs, dtype=np.uint8))
             # print(leftPixels[r, c])
             # input()
-            leftRecoloredPixels[r][c] = np.array(output, dtype=np.uint8)
+            leftRecoloredPixels[r][c] = np.array([redOutput[0], greenOutput[0], blueOutput[0]], dtype=np.uint8)
     leftRecoloredPixels = np.array(leftRecoloredPixels, dtype=np.uint8)
     image = Image.fromarray(leftRecoloredPixels)
     image.save("improved-agent-training-results.png")
