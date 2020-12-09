@@ -45,11 +45,13 @@ val_ds = tf.keras.preprocessing.image_dataset_from_directory(
 )
 
 #check if properly grayscaled
-plt.figure()
+plt.figure(figsize=(10,10))
 for images in train_ds.take(1):
-    for i in range(3):
-        plt.imshow(images[i].numpy().astype("float").reshape(180,180))
+    for i in range(9):
+        ax = plt.subplot(3,3, i + 1)
+        plt.imshow(images[i].numpy().astype("uint8").reshape((180,180)), cmap = "gray")
         plt.title("Is she grayscale?")
+        plt.axis('off')
 plt.show()
 
 ''' 
