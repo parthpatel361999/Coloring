@@ -24,7 +24,7 @@ def modelbuilder(numlayers):
 
 #load in images in
 # TODO currently working on this
-path = os.getcwd() + "\\flower_photos"
+path = os.getcwd() + "\\flower"
 
 batch_size = 32
 img_height = img_width = 180
