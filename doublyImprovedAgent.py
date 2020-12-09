@@ -48,8 +48,9 @@ val_ds = tf.keras.preprocessing.image_dataset_from_directory(
 plt.figure()
 for images in train_ds.take(1):
     for i in range(3):
-        plt.imshow(images[i].numpy().astype("uint8"))
+        plt.imshow(images[i].numpy().astype("float").reshape(180,180))
         plt.title("Is she grayscale?")
+plt.show()
 
 ''' 
 Structure: 
