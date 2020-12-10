@@ -7,7 +7,7 @@ import numpy as np
 from numpy.core.fromnumeric import shape
 from PIL import Image
 
-from common import convertToGrayscale, getImagePixels, colorDistance, checkQuality
+from common import convertToGrayscale, getImagePixels, colorDistance, checkQuality, checkQuality2
 
 
 class Comparison:
@@ -201,6 +201,7 @@ if __name__ == "__main__":
     originalPixels = getImagePixels("training", "fuji.jpg")
     basicAgent(originalPixels, convertToGrayscale(originalPixels))
 
-    # op = getImagePixels("training", "fuji.jpg")
-    # np = getImagePixels("", "basic-agent-results.png")
-    # print(checkQuality(op, np))
+    #op = getImagePixels("training", "fuji.jpg")
+    #opL = op[:, :int(op.shape[1] / 2)]
+    #np = getImagePixels("", "improved-agent-training-results-4.jpg")
+    #print(checkQuality2(opL, np))

@@ -45,3 +45,14 @@ def checkQuality(originalPixels, newPixels):
             totalDistanceR += colorDistance(rightOriginalPixels[r, c], rightNewPixels[r, c])
             numPixelsR += 1
     return totalDistanceL/numPixelsL, totalDistanceR/numPixelsR
+
+def checkQuality2(originalPixels, newPixels):
+    totalDistance = 0
+    numPixels = 0
+    for r in range(originalPixels.shape[0]):
+        for c in range(originalPixels.shape[1]):
+            if r == 0 or r == originalPixels.shape[0] - 1 or c == 0 or c == originalPixels.shape[1] - 1:
+                continue
+            totalDistance += colorDistance(originalPixels[r, c], newPixels[r, c])
+            numPixels += 1
+    return totalDistance/numPixels
