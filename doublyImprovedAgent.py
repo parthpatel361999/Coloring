@@ -5,19 +5,13 @@ import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import layers
 from tensorflow.keras.models import Sequential
+from skimage import color
 import matplotlib.pyplot as plt
 import pathlib
-from keras.preprocessing.image import ImageDataGenerator, array_to_img, img_to_array, load_img
-from keras.layers import Conv2D
 
-
-def augment(image):
-    image = tf.cast(image,tf.float32)
-    image = tf.image.rgb_to_grayscale(image)
-    return image
 def modelbuilder(numlayers):
     model = Sequential()
-    model.add(layers.experimental.preprocessing.Resizing(180, 180, input_shape = (180,180,1)))
+    #model.add(layers.experimental.preprocessing.Resizing(input_shape = (180,180,1)))
     # model.add(layers.Conv2D(64,3,activation='relu',padding='same', use_bias = True, kernel_regularizer = tf.keras.regularizers.L1L2(l1 = 0.01, l2= 0.01)))
     # i = 0 
     # while i < numlayers: #
@@ -25,57 +19,71 @@ def modelbuilder(numlayers):
     #     i += 1
     # model.add(layers.Conv2D(64,3,activation='relu', padding='same', use_bias = True, kernel_regularizer = tf.keras.regularizers.L1L2(l1 = 0.01, l2= 0.01)))
     # model.add(layers.Conv2D(3,3,activation='relu', padding='same', use_bias = True, kernel_regularizer = tf.keras.regularizers.L1L2(l1 = 0.01, l2= 0.01)))
-    
-    model.add(Conv2D(512, (3, 3), activation='relu', padding='same'))
-    model.add(Conv2D(256, (3, 3), activation='relu', padding='same'))
-    model.add(Conv2D(128, (3, 3), activation='relu', padding='same'))
-    model.add(Conv2D(64, (3, 3), activation='relu', padding='same'))
-    model.add(Conv2D(32, (3, 3), activation='relu', padding='same'))
-    model.add(Conv2D(3, (3, 3), activation='tanh', padding='same'))
+    model.add(layers.InputLayer(input_shape=(100, 100, 1)))
+    model.add(keras.layers.Conv2D(128, kernel_size=3, activation='relu', padding='same'))
+    model.add(keras.layers.Conv2D(128, kernel_size=3, activation='relu', padding='same'))
+    model.add(keras.layers.Conv2D(128, kernel_size=3, activation='relu', padding='same'))
+    model.add(keras.layers.Conv2D(128, kernel_size=3, activation='relu', padding='same'))
+    model.add(keras.layers.Conv2D(3, kernel_size=3, activation='relu', padding='same'))
 
-    model.compile(optimizer='adam', loss = 'mse')
-    #model.summary()
+    model.compile(optimizer='sgd', loss = 'mse', metrics=['accuracy'])
+    model.summary()
     return model
 
-#load in images in
-# TODO currently working on this
-path = os.getcwd() + "\\flower"
-
-batch_size = 32
-img_height = img_width = 180
-
-X = []
+trainGray = []
 for filename in os.listdir('trainingImages/'):
-    X.append(img_to_array(load_img(path = 'trainingImages/'+filename, color_mode ='grayscale', target_size=(180,180))))
-X = np.array(X, dtype=float)
-print(X.shape)
-X /= 255.0
+    trainGray.append(keras.preprocessing.image.img_to_array(keras.preprocessing.image.load_img(path = 'trainingImages/'+filename, color_mode ='grayscale', target_size=(100,100))))
+trainGray = np.array(trainGray, dtype=float)
+print(trainGray.shape)
+trainGray /= 255.0
 
-Y = []
+trainLab = []
 for filename in os.listdir('trainingImages/'):
-    Y.append(img_to_array(load_img(path = 'trainingImages/'+filename, color_mode ='rgb', target_size=(180,180))))
-Y = np.array(Y, dtype=float)
-print(Y.shape)
-Y /= 255.0
+    trainLab.append(color.rgb2lab(keras.preprocessing.image.img_to_array(keras.preprocessing.image.load_img(path = 'trainingImages/'+filename, color_mode ='rgb', target_size=(100,100)))))
+trainLab = np.array(trainLab, dtype=float)
+print(trainLab.shape)
+print(np.max(trainLab))
+print(np.min(trainLab))
+trainLab /= 255.0
 
-m = modelbuilder(1)
-m.summary()
-output = m.fit(X, Y, validation_split = 0.2, epochs = 3, batch_size=10)
-
-out = m.predict(X[0:2])
-
-print(out.shape)
-print(out[0,0,0])
-plt.figure()
-plt.imshow(out[0])
-plt.colorbar()
-plt.grid(False)
+plt.figure(figsize=(10,10))
+for i in range(6):
+    plt.subplot(4,4,i+1)
+    plt.xticks([])
+    plt.yticks([])
+    plt.grid(False)
+    plt.imshow(trainGray[i,:,:,0])
+    plt.xlabel("RGB Grayscale")
+for i in range(6):
+    plt.subplot(4,4,i+7)
+    plt.xticks([])
+    plt.yticks([])
+    plt.grid(False)
+    plt.imshow(trainLab[i,:,:,0])
+    plt.xlabel("Lab Grayscale")
 plt.show()
 
+
+trainColor = []
+for filename in os.listdir('trainingImages/'):
+    trainColor.append(keras.preprocessing.image.img_to_array(keras.preprocessing.image.load_img(path = 'trainingImages/'+filename, color_mode ='rgb', target_size=(100,100))))
+trainColor = np.array(trainColor, dtype=float)
+print(trainColor.shape)
+trainColor /= 255.0
+
+m = modelbuilder(1)
+for i in range(4):
+    output = m.fit(trainGray[:1], trainColor[:1], epochs = 50, batch_size=1, use_multiprocessing=True, verbose=2)
+    out = m.predict(trainGray[:1])
+    plt.figure()
+    plt.imshow(out[0])
+    plt.colorbar()
+    plt.grid(False)
+    plt.show()
+
 print(out.shape)
-print(out[0,0,0])
 plt.figure()
-plt.imshow(out[1])
+plt.imshow(out[0])
 plt.colorbar()
 plt.grid(False)
 plt.show()
