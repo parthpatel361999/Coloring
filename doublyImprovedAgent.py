@@ -62,7 +62,7 @@ trainLab = []
 for filename in os.listdir('flower/flower_photos'):
     trainLab.append(color.rgb2lab(transform.resize(1.0/255*io.imread('flower/flower_photos/' + filename), target_size)))
     i += 1
-    if(i == 24):
+    if(i == 30):
         break
 trainLab = np.array(trainLab, dtype=float)
 trainLab[:,:,:,0] /= 100
@@ -83,13 +83,22 @@ print(np.min(trainLab[0,:,:,2]))
 # print(trainColor.shape)
 # trainColor /= 255.0
 
+testLab = []
+for filename in os.listdir('testingImages/'):
+    testLab.append(color.rgb2lab(transform.resize(1.0/255*io.imread('testingImages/' + filename), target_size)))
+testLab = np.array(testLab, dtype=float)
+testLab[:,:,:,0] /= 100
+testLab[:,:,:,1] /= 128
+testLab[:,:,:,2] /= 128
+
+
 m = modelbuilder(1)
 output = m.fit(trainLab[:30,:,:,:1], trainLab[:30,:,:,1:], epochs = 300, batch_size=5, use_multiprocessing=True, validation_split=0.2, verbose=2)
-out = m.predict(trainLab[:30,:,:,:1])
+out = m.predict(testLab[:30,:,:,:1])
 
 for i in range(len(out)):
     img = np.zeros((256,256,3))
-    img[:,:,0] = trainLab[i][:,:,0] * 100
+    img[:,:,0] = testLab[i][:,:,0] * 100
     img[:,:,1:] = out[i] * 128
     img = color.lab2rgb(img)
     
