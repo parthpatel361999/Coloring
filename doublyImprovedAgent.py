@@ -17,13 +17,13 @@ def augment(image):
 def modelbuilder(numlayers):
     model = Sequential()
     model.add(layers.experimental.preprocessing.Rescaling(1./255, input_shape = (180,180,1)))
-    model.add(layers.Conv2D(64,3,activation='tanh',padding='same', use_bias = True, kernel_regularizer = tf.keras.regularizers.L1L2(l1 = 0.01, l2= 0.01)))
+    model.add(layers.Conv2D(64,3,activation='relu',padding='same', use_bias = True, kernel_regularizer = tf.keras.regularizers.L1L2(l1 = 0.01, l2= 0.01)))
     i = 0 
     while i < numlayers: #
-        model.add(layers.Conv2D(64,3,activation='tanh', padding='same', use_bias = True, kernel_regularizer = tf.keras.regularizers.L1L2(l1 = 0.01, l2= 0.01)))
+        model.add(layers.Conv2D(64,3,activation='relu', padding='same', use_bias = True, kernel_regularizer = tf.keras.regularizers.L1L2(l1 = 0.01, l2= 0.01)))
         i += 1
-    
-    model.add(layers.Conv2D(3,3,activation='tanh', padding='same', use_bias = True, kernel_regularizer = tf.keras.regularizers.L1L2(l1 = 0.01, l2= 0.01)))
+    model.add(layers.Conv2D(64,3,activation='relu', padding='same', use_bias = True, kernel_regularizer = tf.keras.regularizers.L1L2(l1 = 0.01, l2= 0.01)))
+    model.add(layers.Conv2D(3,3,activation='relu', padding='same', use_bias = True, kernel_regularizer = tf.keras.regularizers.L1L2(l1 = 0.01, l2= 0.01)))
     
     model.compile(optimizer='adam',loss = 'mse')
     #model.summary()
@@ -36,45 +36,6 @@ path = os.getcwd() + "\\flower"
 batch_size = 32
 img_height = img_width = 180
 
-# train_ds = tf.keras.preprocessing.image_dataset_from_directory(
-#     pathlib.Path(path), label_mode = None, validation_split=0.2,
-#     seed=123, image_size = (img_height,img_width),
-#     subset = "training"
-# )
-
-# train_ds_2 = (
-#     train_ds
-#     .map(augment) #add autotuning
-# )
-
-
-# val_ds = tf.keras.preprocessing.image_dataset_from_directory(
-#     pathlib.Path(path),label_mode = None, validation_split= 0.2,
-#     seed=123, image_size = (img_height,img_width),
-#     batch_size = batch_size,
-#     subset = "validation"
-# )
-
-
-# #check if properly grayscaled
-# plt.figure(figsize=(10,10))
-
-# for images in train_ds.take(1):
-#     for i in range(9):
-#         ax = plt.subplot(3,3, i + 1)
-#         plt.imshow(images[i].numpy().astype("uint8"))
-#         plt.title("Is she grayscale?")
-#         plt.axis('off')
-# plt.show()
-
-# for images in train_ds_2.take(1):
-#     for i in range(9):
-#         ax = plt.subplot(3,3, i + 1)
-#         plt.imshow(images[i].numpy().astype("uint8").reshape((180,180)),cmap="gray")
-#         plt.title("Is she grayscale?")
-#         plt.axis('off')
-# plt.show()
-
 X = []
 for filename in os.listdir('trainingImages/'):
     X.append(img_to_array(load_img(path = 'trainingImages/'+filename, color_mode ='grayscale', target_size=(180,180))))
@@ -86,16 +47,22 @@ for filename in os.listdir('trainingImages/'):
     Y.append(img_to_array(load_img(path = 'trainingImages/'+filename, color_mode ='rgb', target_size=(180,180))))
 Y = np.array(Y, dtype=float)
 print(Y.shape)
+Y /= 255
 
 m = modelbuilder(1)
 m.summary()
-output = m.fit(X, Y, epochs = 5)
+output = m.fit(X, Y, epochs = 5, batch_size=32)
 
-# Set up train and test data
-split = int(0.95*len(X))
-Xtrain = X[:split]
-Xtrain = 1.0/255*Xtrain
+out = m.predict(X)
 
+print(out.shape)
+print(out[0])
+
+plt.figure()
+plt.imshow(out[0])
+plt.colorbar()
+plt.grid(False)
+plt.show()
 
 
 ''' 
