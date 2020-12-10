@@ -57,10 +57,13 @@ def modelbuilder(numlayers):
 # trainGray = np.array(trainGray, dtype=float)
 # print(trainGray.shape)
 # trainGray /= 255.0
-
+i = 0
 trainLab = []
-for filename in os.listdir('trainingImages/'):
-    trainLab.append(color.rgb2lab(transform.resize(1.0/255*io.imread('trainingImages/' + filename), target_size)))
+for filename in os.listdir('flower/flower_photos'):
+    trainLab.append(color.rgb2lab(transform.resize(1.0/255*io.imread('flower/flower_photos/' + filename), target_size)))
+    i += 1
+    if(i == 24):
+        break
 trainLab = np.array(trainLab, dtype=float)
 trainLab[:,:,:,0] /= 100
 trainLab[:,:,:,1] /= 128
@@ -81,8 +84,8 @@ print(np.min(trainLab[0,:,:,2]))
 # trainColor /= 255.0
 
 m = modelbuilder(1)
-output = m.fit(trainLab[:5,:,:,:1], trainLab[:5,:,:,1:], epochs = 300, batch_size=5, use_multiprocessing=True, validation_split=0.2, verbose=2)
-out = m.predict(trainLab[:5,:,:,:1])
+output = m.fit(trainLab[:30,:,:,:1], trainLab[:30,:,:,1:], epochs = 300, batch_size=5, use_multiprocessing=True, validation_split=0.2, verbose=2)
+out = m.predict(trainLab[:30,:,:,:1])
 
 for i in range(len(out)):
     img = np.zeros((256,256,3))
@@ -91,7 +94,7 @@ for i in range(len(out)):
     img = color.lab2rgb(img)
     
     plt.figure()
-    plt.imshow(img)
+    plt.imshow(img) 
     plt.colorbar()
     plt.grid(False)
     plt.show()
