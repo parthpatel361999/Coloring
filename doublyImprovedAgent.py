@@ -9,8 +9,9 @@ import matplotlib.pyplot as plt
 import pathlib
 #build model first
 # TODO Have not tested yet
-def modelbuilder(numlayers):
+def modelbuilder(numlayers,):
     model = Sequential()
+    model.add(layers.experimental.preprocessing.Rescaling(1./255, input_shape = (180,180,1)))
     model.add(layers.Conv2D(64,3,activation='tanh',use_bias = True, kernel_regularizer = tf.keras.regularizers.L1L2(l1 = 0.01, l2= 0.01)))
     i = 0 
     while i < numlayers: #
@@ -18,8 +19,9 @@ def modelbuilder(numlayers):
         i += 1
     
     model.add(layers.Conv2D(3,3,activation='tanh',use_bias = True, kernel_regularizer = tf.keras.regularizers.L1L2(l1 = 0.01, l2= 0.01)))
-    model.compile(optimizer='adam',loss = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),metrics=['accuracy'])
-
+    
+    model.compile(optimizer='adam',loss = 'mse',metrics=['accuracy'])
+    model.summary()
     return model
 
 #load in images in
@@ -53,6 +55,12 @@ for images in train_ds.take(1):
         plt.title("Is she grayscale?")
         plt.axis('off')
 plt.show()
+
+for i in range(1):
+    m = modelbuilder(i)
+    m.summary()
+
+
 
 ''' 
 Structure: 
