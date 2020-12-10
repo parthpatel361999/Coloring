@@ -10,7 +10,7 @@ from keras.layers import Conv2D, Conv2DTranspose, UpSampling2D
 import matplotlib.pyplot as plt
 import pathlib
 
-target_size = (200,200)
+target_size = (256,256)
 
 def modelbuilder(numlayers):
     model = Sequential()
@@ -24,7 +24,7 @@ def modelbuilder(numlayers):
     # model.add(layers.Conv2D(3,3,activation='relu', padding='same', use_bias = True, kernel_regularizer = tf.keras.regularizers.L1L2(l1 = 0.01, l2= 0.01)))
     
     
-    model.add(layers.InputLayer(input_shape=(200, 200, 1)))
+    model.add(layers.InputLayer(input_shape=(256, 256, 1)))
     # model.add(keras.layers.Conv2D(128, kernel_size=3, activation='relu', padding='same'))
     # model.add(keras.layers.Conv2D(128, kernel_size=3, activation='relu', padding='same'))
     # model.add(keras.layers.Conv2D(128, kernel_size=3, activation='relu', padding='same'))
@@ -60,18 +60,18 @@ def modelbuilder(numlayers):
 
 trainLab = []
 for filename in os.listdir('trainingImages/'):
-    trainLab.append(color.rgb2lab(transform.resize(io.imread('trainingImages/' + filename), target_size)))
+    trainLab.append(color.rgb2lab(transform.resize(1.0/255*io.imread('trainingImages/' + filename), target_size)))
 trainLab = np.array(trainLab, dtype=float)
 trainLab[:,:,:,0] /= 100
 trainLab[:,:,:,1] /= 128
 trainLab[:,:,:,2] /= 128
-# print("trainlab size")
-# print(np.max(trainLab[0,:,:,0]))
-# print(np.min(trainLab[0,:,:,0]))
-# print(np.max(trainLab[0,:,:,1]))
-# print(np.min(trainLab[0,:,:,1]))
-# print(np.max(trainLab[0,:,:,2]))
-# print(np.min(trainLab[0,:,:,2]))
+print("trainlab size")
+print(np.max(trainLab[0,:,:,0]))
+print(np.min(trainLab[0,:,:,0]))
+print(np.max(trainLab[0,:,:,1]))
+print(np.min(trainLab[0,:,:,1]))
+print(np.max(trainLab[0,:,:,2]))
+print(np.min(trainLab[0,:,:,2]))
 
 # trainColor = []
 # for filename in os.listdir('trainingImages/'):
@@ -81,11 +81,11 @@ trainLab[:,:,:,2] /= 128
 # trainColor /= 255.0
 
 m = modelbuilder(1)
-output = m.fit(trainLab[:1,:,:,:1], trainLab[:1,:,:,1:], epochs = 50, batch_size=1, use_multiprocessing=True, verbose=2)
-out = m.predict(trainLab[:1,:,:,:1])
+output = m.fit(trainLab[:5,:,:,:1], trainLab[:5,:,:,1:], epochs = 300, batch_size=5, use_multiprocessing=True, validation_split=0.2, verbose=2)
+out = m.predict(trainLab[:5,:,:,:1])
 
 for i in range(len(out)):
-    img = np.zeros((200,200,3))
+    img = np.zeros((256,256,3))
     img[:,:,0] = trainLab[i][:,:,0] * 100
     img[:,:,1:] = out[i] * 128
     img = color.lab2rgb(img)
