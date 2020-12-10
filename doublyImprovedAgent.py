@@ -5,9 +5,12 @@ import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import layers
 from tensorflow.keras.models import Sequential
-from skimage import color
+from skimage import color, io, transform
+from keras.layers import Conv2D, Conv2DTranspose, UpSampling2D
 import matplotlib.pyplot as plt
 import pathlib
+
+target_size = (200,200)
 
 def modelbuilder(numlayers):
     model = Sequential()
@@ -19,74 +22,79 @@ def modelbuilder(numlayers):
     #     i += 1
     # model.add(layers.Conv2D(64,3,activation='relu', padding='same', use_bias = True, kernel_regularizer = tf.keras.regularizers.L1L2(l1 = 0.01, l2= 0.01)))
     # model.add(layers.Conv2D(3,3,activation='relu', padding='same', use_bias = True, kernel_regularizer = tf.keras.regularizers.L1L2(l1 = 0.01, l2= 0.01)))
-    model.add(layers.InputLayer(input_shape=(100, 100, 1)))
-    model.add(keras.layers.Conv2D(128, kernel_size=3, activation='relu', padding='same'))
-    model.add(keras.layers.Conv2D(128, kernel_size=3, activation='relu', padding='same'))
-    model.add(keras.layers.Conv2D(128, kernel_size=3, activation='relu', padding='same'))
-    model.add(keras.layers.Conv2D(128, kernel_size=3, activation='relu', padding='same'))
-    model.add(keras.layers.Conv2D(3, kernel_size=3, activation='relu', padding='same'))
+    
+    
+    model.add(layers.InputLayer(input_shape=(200, 200, 1)))
+    # model.add(keras.layers.Conv2D(128, kernel_size=3, activation='relu', padding='same'))
+    # model.add(keras.layers.Conv2D(128, kernel_size=3, activation='relu', padding='same'))
+    # model.add(keras.layers.Conv2D(128, kernel_size=3, activation='relu', padding='same'))
+    # model.add(keras.layers.Conv2D(128, kernel_size=3, activation='relu', padding='same'))
+    # model.add(keras.layers.Conv2D(2, kernel_size=3, activation='relu', padding='same'))
 
-    model.compile(optimizer='sgd', loss = 'mse', metrics=['accuracy'])
+    model.add(Conv2D(64, (3, 3), activation='relu', padding='same'))
+    model.add(Conv2D(64, (3, 3), activation='relu', padding='same', strides=2))
+    model.add(Conv2D(128, (3, 3), activation='relu', padding='same'))
+    model.add(Conv2D(128, (3, 3), activation='relu', padding='same', strides=2))
+    model.add(Conv2D(256, (3, 3), activation='relu', padding='same'))
+    model.add(Conv2D(256, (3, 3), activation='relu', padding='same', strides=2))
+    model.add(Conv2D(512, (3, 3), activation='relu', padding='same'))
+    model.add(Conv2D(256, (3, 3), activation='relu', padding='same'))
+    model.add(Conv2D(128, (3, 3), activation='relu', padding='same'))
+    model.add(UpSampling2D((2, 2)))
+    model.add(Conv2D(64, (3, 3), activation='relu', padding='same'))
+    model.add(UpSampling2D((2, 2)))
+    model.add(Conv2D(32, (3, 3), activation='relu', padding='same'))
+    model.add(Conv2D(2, (3, 3), activation='tanh', padding='same'))
+    model.add(UpSampling2D((2, 2)))
+
+    model.compile(optimizer='rmsprop', loss = 'mse', metrics=['accuracy'])
     model.summary()
     return model
 
-trainGray = []
-for filename in os.listdir('trainingImages/'):
-    trainGray.append(keras.preprocessing.image.img_to_array(keras.preprocessing.image.load_img(path = 'trainingImages/'+filename, color_mode ='grayscale', target_size=(100,100))))
-trainGray = np.array(trainGray, dtype=float)
-print(trainGray.shape)
-trainGray /= 255.0
+# trainGray = []
+# for filename in os.listdir('trainingImages/'):
+#     trainGray.append(keras.preprocessing.image.img_to_array(keras.preprocessing.image.load_img(path = 'trainingImages/'+filename, color_mode ='grayscale', target_size=target_size)))
+# trainGray = np.array(trainGray, dtype=float)
+# print(trainGray.shape)
+# trainGray /= 255.0
 
 trainLab = []
 for filename in os.listdir('trainingImages/'):
-    trainLab.append(color.rgb2lab(keras.preprocessing.image.img_to_array(keras.preprocessing.image.load_img(path = 'trainingImages/'+filename, color_mode ='rgb', target_size=(100,100)))))
+    trainLab.append(color.rgb2lab(transform.resize(io.imread('trainingImages/' + filename), target_size)))
 trainLab = np.array(trainLab, dtype=float)
-print(trainLab.shape)
-print(np.max(trainLab))
-print(np.min(trainLab))
-trainLab /= 255.0
+trainLab[:,:,:,0] /= 100
+trainLab[:,:,:,1] /= 128
+trainLab[:,:,:,2] /= 128
+# print("trainlab size")
+# print(np.max(trainLab[0,:,:,0]))
+# print(np.min(trainLab[0,:,:,0]))
+# print(np.max(trainLab[0,:,:,1]))
+# print(np.min(trainLab[0,:,:,1]))
+# print(np.max(trainLab[0,:,:,2]))
+# print(np.min(trainLab[0,:,:,2]))
 
-plt.figure(figsize=(10,10))
-for i in range(6):
-    plt.subplot(4,4,i+1)
-    plt.xticks([])
-    plt.yticks([])
-    plt.grid(False)
-    plt.imshow(trainGray[i,:,:,0])
-    plt.xlabel("RGB Grayscale")
-for i in range(6):
-    plt.subplot(4,4,i+7)
-    plt.xticks([])
-    plt.yticks([])
-    plt.grid(False)
-    plt.imshow(trainLab[i,:,:,0])
-    plt.xlabel("Lab Grayscale")
-plt.show()
-
-
-trainColor = []
-for filename in os.listdir('trainingImages/'):
-    trainColor.append(keras.preprocessing.image.img_to_array(keras.preprocessing.image.load_img(path = 'trainingImages/'+filename, color_mode ='rgb', target_size=(100,100))))
-trainColor = np.array(trainColor, dtype=float)
-print(trainColor.shape)
-trainColor /= 255.0
+# trainColor = []
+# for filename in os.listdir('trainingImages/'):
+#     trainColor.append(keras.preprocessing.image.img_to_array(keras.preprocessing.image.load_img(path = 'trainingImages/'+filename, color_mode ='rgb', target_size=(100,100))))
+# trainColor = np.array(trainColor, dtype=float)
+# print(trainColor.shape)
+# trainColor /= 255.0
 
 m = modelbuilder(1)
-for i in range(4):
-    output = m.fit(trainGray[:1], trainColor[:1], epochs = 50, batch_size=1, use_multiprocessing=True, verbose=2)
-    out = m.predict(trainGray[:1])
+output = m.fit(trainLab[:1,:,:,:1], trainLab[:1,:,:,1:], epochs = 50, batch_size=1, use_multiprocessing=True, verbose=2)
+out = m.predict(trainLab[:1,:,:,:1])
+
+for i in range(len(out)):
+    img = np.zeros((200,200,3))
+    img[:,:,0] = trainLab[i][:,:,0] * 100
+    img[:,:,1:] = out[i] * 128
+    img = color.lab2rgb(img)
+    
     plt.figure()
-    plt.imshow(out[0])
+    plt.imshow(img)
     plt.colorbar()
     plt.grid(False)
     plt.show()
-
-print(out.shape)
-plt.figure()
-plt.imshow(out[0])
-plt.colorbar()
-plt.grid(False)
-plt.show()
 
 ''' 
 Structure: 
