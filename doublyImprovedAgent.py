@@ -121,5 +121,5 @@ for i in range(len(out)):
     plt.imshow(img) 
     plt.colorbar()
     plt.grid(False)
-    plt.show()
     plt.savefig(str(i) + '.png')
+    plt.show()
