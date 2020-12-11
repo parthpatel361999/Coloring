@@ -10,12 +10,12 @@ from PIL import Image
 from scipy.ndimage.filters import gaussian_filter1d
 from scipy.signal import savgol_filter
 
-from common import (colorDistance, convertToGrayscale, getImagePixels,
-                    getSection)
+from common import (checkQuality2, colorDistance, convertToGrayscale,
+                    getImagePixels, getSection)
 
 
 def sigmoid(z) -> float:
-    return 1.0/(1.0 + np.exp(-z)) if z >= 0 else 1.0 - (1.0 / (1.0 + np.exp(z)))
+    return 1.0/(1.0 + np.exp(-z))
 
 
 def sigmoidDerivative(z) -> float:
@@ -36,21 +36,19 @@ class NeuralNetwork:
         "relu": reluDerivative
     }
 
-    COLOR_IMPORTANCES = [2, 4, 3]
-
-    INPUT_SIZE = 12
+    INPUT_SIZE = 13
     OUTPUT_SIZE = 3
 
     WEIGHTS = "weights"
     OUTPUT = "output"
 
-    def __init__(self, nodeCounts, activationFunction=sigmoid, learningRate=0.03) -> None:
+    def __init__(self, nodeCounts, activationFunction=sigmoid, learningRate=0.1) -> None:
         self.activationFunction = activationFunction
         self.activationDerivative = self.ACTIVATION_DERIVATIVES[activationFunction.__name__]
         self.learningRate = learningRate
         self.inputs = np.array([])
 
-        np.random.seed(0)
+        # np.random.seed()
         self.network = []
         for l in range(len(nodeCounts)):
             layer = []
@@ -105,7 +103,7 @@ class NeuralNetwork:
                 baseGradient = 1  # Set gradient to activation function derivative of current node's output value
                 if l == len(self.network) - 1:  # If L is the last layer in the network
                     # AKA dL / dO_n
-                    lossFunctionDerivative = 2 * (node[self.OUTPUT] - expected[n]) * self.COLOR_IMPORTANCES[n]
+                    lossFunctionDerivative = 2 * (node[self.OUTPUT] - expected[n])
                     # Multiply gradient by loss function derivative
                     baseGradient *= lossFunctionDerivative * sigmoidDerivative(node[self.OUTPUT])
                     # dO_n / dI_n * dL / dO_n = dL / dO_n
@@ -139,7 +137,6 @@ class NeuralNetwork:
         prevTrainingIndices = set()
         prevValidationIndices = set()
 
-        seed(0)
         while epoch < minEpochs or validationImproving:
             print("EPOCH", str(epoch))
 
@@ -183,7 +180,38 @@ class NeuralNetwork:
         return (np.array(trainingErrors), np.array(validationErrors), minValidationErrorEpoch)
 
 
-def improvedAgent(originalPixels, grayscalePixels):
+def prepareInput(r, c, pixels, numSections=(6, 6), reversedCols=False):
+    rowSections, colSections = numSections
+    rowDividers = np.linspace(0, pixels.shape[0], rowSections)
+    colDividers = np.linspace(0, pixels.shape[1], colSections) if not reversedCols else np.linspace(
+        pixels.shape[1], 0, colSections)
+    # rowInputs = np.linspace(0, 1, rowSections)
+    # colInputs = np.linspace(0, 1, colSections) if not reversedCols else np.linspace(1, 0, colSections)
+    patch = getSection(r, c, pixels, True) / 255.0
+    extraInputAttributes = []
+    rowIndex = 0
+    for i in range(len(rowDividers)):
+        if rowDividers[i] > r:
+            rowIndex = i
+            break
+    colIndex = 0
+    for i in range(len(colDividers)):
+        if not reversedCols and colDividers[i] > c:
+            colIndex = i
+            break
+        elif reversedCols and colDividers[i] < c:
+            colIndex = i
+            break
+    extraInputAttributes.append(rowIndex/rowSections)
+    extraInputAttributes.append(colIndex/colSections)
+    extraInputAttributes.append(
+        (r % int(pixels.shape[0] / rowSections)) / int(pixels.shape[0] / rowSections))
+    extraInputAttributes.append(
+        (c % int(pixels.shape[1] / colSections)) / int(pixels.shape[1] / colSections))
+    return np.append(patch, extraInputAttributes)
+
+
+def improvedAgent(originalPixels, grayscalePixels, name):
     leftPixels = originalPixels[:, :int(originalPixels.shape[1] / 2)]
     leftGrayscalePixels = grayscalePixels[:, :int(originalPixels.shape[1] / 2)]
 
@@ -196,21 +224,13 @@ def improvedAgent(originalPixels, grayscalePixels):
         trainingInputsRow = []
         trainingExpectedRow = []
         for c in range(1, trainingInputPixels.shape[1] - 1):
-            quadrant = 2
-            if r > int(trainingInputPixels.shape[0] / 2) and c > int(trainingInputPixels.shape[1] / 2):
-                quadrant = 4
-            elif r > int(trainingInputPixels.shape[0] / 2):
-                quadrant = 3
-            elif c > int(trainingInputPixels.shape[1] / 2):
-                quadrant = 1
-            section = np.append(getSection(r, c, trainingInputPixels, True), np.array(
-                [int(trainingInputPixels.shape[0] / 2) % r, int(trainingInputPixels.shape[1] / 2) % c, quadrant]))
-            trainingInputsRow.append(section)
-            trainingExpectedRow.append(trainingExpectedPixels[r, c])
+            trainingInput = prepareInput(r, c, trainingInputPixels)
+            trainingInputsRow.append(trainingInput)
+            trainingExpectedRow.append(trainingExpectedPixels[r, c] / 255.0)
         trainingInputs.append(trainingInputsRow)
         trainingExpected.append(trainingExpectedRow)
-    trainingInputs = np.array(trainingInputs) / 255.0
-    trainingExpected = np.array(trainingExpected) / 255.0
+    trainingInputs = np.array(trainingInputs)
+    trainingExpected = np.array(trainingExpected)
 
     validationInputPixels = leftGrayscalePixels[:, int(leftGrayscalePixels.shape[1] * (1 - validationPortion)):]
     validationExpectedPixels = leftPixels[:, int(leftPixels.shape[1] * (1 - validationPortion)):]
@@ -220,26 +240,18 @@ def improvedAgent(originalPixels, grayscalePixels):
         validationInputsRow = []
         validationExpectedRow = []
         for c in range(1, validationInputPixels.shape[1] - 1):
-            quadrant = 2
-            if r > int(validationInputPixels.shape[0] / 2) and c > int(validationInputPixels.shape[1] / 2):
-                quadrant = 4
-            elif r > int(validationInputPixels.shape[0] / 2):
-                quadrant = 3
-            elif c > int(validationInputPixels.shape[1] / 2):
-                quadrant = 1
-            section = np.append(getSection(r, c, validationInputPixels, True), np.array(
-                [int(validationInputPixels.shape[0] / 2) % r, int(validationInputPixels.shape[1] / 2) % c, quadrant]))
-            validationInputsRow.append(section)
-            validationExpectedRow.append(validationExpectedPixels[r, c])
+            validationInput = prepareInput(r, c, validationInputPixels)
+            validationInputsRow.append(validationInput)
+            validationExpectedRow.append(validationExpectedPixels[r, c] / 255.0)
         validationInputs.append(validationInputsRow)
         validationExpected.append(validationExpectedRow)
-    validationInputs = np.array(validationInputs) / 255.0
-    validationExpected = np.array(validationExpected) / 255.0
+    validationInputs = np.array(validationInputs)
+    validationExpected = np.array(validationExpected)
 
-    nodeCounts = [50, 50, 50, 50]
-    minEpochs = 30000
-    smoothingFactor = int(minEpochs / 15)
-    network = NeuralNetwork(nodeCounts)
+    nodeCounts = [10]
+    minEpochs = 5000
+    smoothingFactor = int(minEpochs / 20)
+    network = NeuralNetwork(nodeCounts, learningRate=0.40)
     trainingErrors, validationErrors, minValidationError = network.train(
         (trainingInputs, trainingExpected), (validationInputs, validationExpected),
         minEpochs=minEpochs, smoothingFactor=smoothingFactor)
@@ -256,6 +268,7 @@ def improvedAgent(originalPixels, grayscalePixels):
     plt.legend(loc="best")
     plt.savefig("training-validation-stats.png")
     plt.close(figure)
+    print("Minimum Validation Error:", str(validationErrorsSmooth[minValidationError]))
 
     leftRecoloredPixels = [[[] for j in range(leftPixels.shape[1])] for i in range(leftPixels.shape[0])]
     for r in range(0, leftGrayscalePixels.shape[0]):
@@ -263,26 +276,23 @@ def improvedAgent(originalPixels, grayscalePixels):
             if r == 0 or r == leftPixels.shape[0] - 1 or c == 0 or c == leftPixels.shape[1] - 1:
                 leftRecoloredPixels[r][c] = np.array([0, 0, 0], dtype=np.uint8)
                 continue
-            quadrant = 2
-            if r > int(leftGrayscalePixels.shape[0] / 2) and c > int(leftGrayscalePixels.shape[1] / 2):
-                quadrant = 4
-            elif r > int(leftGrayscalePixels.shape[0] / 2):
-                quadrant = 3
-            elif c > int(leftGrayscalePixels.shape[1] / 2):
-                quadrant = 1
-            section = np.append(getSection(r, c, leftGrayscalePixels, True), np.array(
-                [int(leftGrayscalePixels.shape[0] / 2) % r, int(leftGrayscalePixels.shape[1] / 2) % c, quadrant]))
-            output = 255 * np.array(network.forwardPropagate(section, True))
-            # print(np.array(outputs, dtype=np.uint8))
-            # print(leftPixels[r, c])
-            # input()
+            testInput = prepareInput(r, c, leftGrayscalePixels)
+            networkOutputs = network.forwardPropagate(testInput, True)
+            output = 255 * np.array(networkOutputs)
             leftRecoloredPixels[r][c] = np.array(output, dtype=np.uint8)
     leftRecoloredPixels = np.array(leftRecoloredPixels, dtype=np.uint8)
     image = Image.fromarray(leftRecoloredPixels)
-    image.save("improved-agent-training-results.png")
+    image.save(name)
 
 
 if __name__ == "__main__":
     originalPixels = getImagePixels("training", "fuji.jpg")
-    # astroworld, starboy, after hours, bobby tarantino,
-    improvedAgent(originalPixels, convertToGrayscale(originalPixels))
+    opL = originalPixels[:, :int(originalPixels.shape[1] / 2)]
+    name = "improved-agent-training-results-lr-50-nodes-10-sections-1010.png"
+    iterations = 10
+    sumI = 0
+    for i in range(iterations):
+        improvedAgent(originalPixels, convertToGrayscale(originalPixels), name)
+        newPixels = getImagePixels("", name)
+        sumI += checkQuality2(opL, newPixels)
+    print(sumI / iterations)

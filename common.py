@@ -35,3 +35,15 @@ def getSection(r, c, pixels, grayscale=False):
         nR, nC = neighbor
         section.append(pixels[nR, nC][0] if grayscale else pixels[nR, nC])
     return np.array(section, dtype=np.uint8)
+
+
+def checkQuality2(originalPixels, newPixels):
+    totalDistance = 0
+    numPixels = 0
+    for r in range(originalPixels.shape[0]):
+        for c in range(originalPixels.shape[1]):
+            if r == 0 or r == originalPixels.shape[0] - 1 or c == 0 or c == originalPixels.shape[1] - 1:
+                continue
+            totalDistance += colorDistance(originalPixels[r, c], newPixels[r, c])
+            numPixels += 1
+    return totalDistance/numPixels
