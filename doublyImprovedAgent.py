@@ -47,7 +47,7 @@ trainLab = []
 for filename in os.listdir('flower/flower_photos'):
     trainLab.append(color.rgb2lab(transform.resize(1.0/255*io.imread('flower/flower_photos/' + filename), target_size)))
     i += 1
-    if(i == 1):
+    if(i == 30):
         break
 trainLab = np.array(trainLab, dtype=float)
 trainLab[:,:,:,0] /= 100
@@ -78,8 +78,37 @@ testLab[:,:,:,2] /= 128
 
 
 m = modelbuilder(1)
-'''
-output = m.fit(trainLab[:30,:,:,:1], trainLab[:30,:,:,1:], epochs = 300, batch_size=5, use_multiprocessing=True, validation_split=0.2, verbose=2)
+epochs = 100
+batch_size = 5
+output = m.fit(trainLab[:30,:,:,:1], trainLab[:30,:,:,1:], epochs = epochs, batch_size=batch_size, use_multiprocessing=True, validation_split=0.2, verbose=2)
+
+
+#Performance Graph
+acc = output.history['accuracy']
+val_acc = output.history['val_accuracy']
+
+loss = output.history['loss']
+val_loss = output.history['val_loss']
+
+iterations = range(epochs)
+
+plt.figure(figsize=(10, 10))
+plt.subplot(1, 2, 1)
+plt.plot(iterations, acc, label='Training Accuracy')
+plt.plot(iterations, val_acc, label='Validation Accuracy')
+plt.legend(loc='lower right')
+plt.title('Accuracy')
+
+plt.subplot(1, 2, 2)
+plt.plot(iterations, loss, label='Training Loss')
+plt.plot(iterations, val_loss, label='Validation Loss')
+plt.legend(loc='upper right')
+plt.title('Loss')
+built = "Results from " + str(epochs) +" Epochs at " + str(batch_size) + " of " + str(i) + " Images" 
+plt.savefig(built + '.png')
+plt.show()
+
+
 out = m.predict(testLab[:30,:,:,:1])
 
 for i in range(len(out)):
@@ -93,4 +122,3 @@ for i in range(len(out)):
     plt.colorbar()
     plt.grid(False)
     plt.show()
-'''
