@@ -1,3 +1,4 @@
+import os
 from queue import PriorityQueue
 from random import randint
 from sys import maxsize
@@ -106,7 +107,7 @@ def basicAgent(originalPixels, grayscalePixels):
                                       ] = rightRecoloredPixels[r][c]
     recalculatedImageArray = np.array(recalculatedImageArray, dtype=np.uint8)
     image = Image.fromarray(recalculatedImageArray)
-    image.save("basic-agent-results.png")
+    image.save(os.path.join("results", "basic-agent-results-.png"))
 
 
 def getSection(r, c, pixels):

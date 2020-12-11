@@ -1,3 +1,4 @@
+import os
 from copy import deepcopy
 from math import sqrt
 from random import randint, seed
@@ -8,10 +9,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 from PIL import Image
 from scipy.ndimage.filters import gaussian_filter1d
-from scipy.signal import savgol_filter
 
-from common import (checkQuality2, colorDistance, convertToGrayscale,
-                    getImagePixels, getSection)
+from common import (checkQuality, checkQuality2, colorDistance,
+                    convertToGrayscale, getImagePixels, getSection)
 
 
 def sigmoid(z) -> float:
@@ -36,7 +36,7 @@ class NeuralNetwork:
         "relu": reluDerivative
     }
 
-    INPUT_SIZE = 13
+    INPUT_SIZE = 15
     OUTPUT_SIZE = 3
 
     WEIGHTS = "weights"
@@ -138,8 +138,6 @@ class NeuralNetwork:
         prevValidationIndices = set()
 
         while epoch < minEpochs or validationImproving:
-            print("EPOCH", str(epoch))
-
             stochasticIndex = randint(0, len(trainingInputs) - 1)
             while stochasticIndex in prevTrainingIndices:
                 stochasticIndex = randint(0, len(trainingInputs) - 1)
@@ -180,13 +178,10 @@ class NeuralNetwork:
         return (np.array(trainingErrors), np.array(validationErrors), minValidationErrorEpoch)
 
 
-def prepareInput(r, c, pixels, numSections=(6, 6), reversedCols=False):
+def prepareInput(r, c, pixels, numSections=(15, 3)):
     rowSections, colSections = numSections
     rowDividers = np.linspace(0, pixels.shape[0], rowSections)
-    colDividers = np.linspace(0, pixels.shape[1], colSections) if not reversedCols else np.linspace(
-        pixels.shape[1], 0, colSections)
-    # rowInputs = np.linspace(0, 1, rowSections)
-    # colInputs = np.linspace(0, 1, colSections) if not reversedCols else np.linspace(1, 0, colSections)
+    colDividers = np.linspace(0, pixels.shape[1], colSections)
     patch = getSection(r, c, pixels, True) / 255.0
     extraInputAttributes = []
     rowIndex = 0
@@ -196,10 +191,7 @@ def prepareInput(r, c, pixels, numSections=(6, 6), reversedCols=False):
             break
     colIndex = 0
     for i in range(len(colDividers)):
-        if not reversedCols and colDividers[i] > c:
-            colIndex = i
-            break
-        elif reversedCols and colDividers[i] < c:
+        if colDividers[i] > c:
             colIndex = i
             break
     extraInputAttributes.append(rowIndex/rowSections)
@@ -208,13 +200,17 @@ def prepareInput(r, c, pixels, numSections=(6, 6), reversedCols=False):
         (r % int(pixels.shape[0] / rowSections)) / int(pixels.shape[0] / rowSections))
     extraInputAttributes.append(
         (c % int(pixels.shape[1] / colSections)) / int(pixels.shape[1] / colSections))
+    extraInputAttributes.append(r / pixels.shape[0])
+    extraInputAttributes.append(c / pixels.shape[1])
     return np.append(patch, extraInputAttributes)
 
 
-def improvedAgent(originalPixels, grayscalePixels, name):
+def improvedAgent(originalPixels, grayscalePixels, iteration):
     leftPixels = originalPixels[:, :int(originalPixels.shape[1] / 2)]
     leftGrayscalePixels = grayscalePixels[:, :int(originalPixels.shape[1] / 2)]
 
+    overallStartTime = time()
+    startTime = time()
     validationPortion = 0.1
     trainingInputPixels = leftGrayscalePixels[:, :int(leftGrayscalePixels.shape[1] * (1 - validationPortion))]
     trainingExpectedPixels = leftPixels[:, :int(leftPixels.shape[1] * (1 - validationPortion))]
@@ -251,10 +247,14 @@ def improvedAgent(originalPixels, grayscalePixels, name):
     nodeCounts = [10]
     minEpochs = 5000
     smoothingFactor = int(minEpochs / 20)
-    network = NeuralNetwork(nodeCounts, learningRate=0.40)
+    network = NeuralNetwork(nodeCounts, learningRate=0.4)
+    print("Training data and network setup took", str(time() - startTime), "seconds.")
+
+    startTime = time()
     trainingErrors, validationErrors, minValidationError = network.train(
         (trainingInputs, trainingExpected), (validationInputs, validationExpected),
         minEpochs=minEpochs, smoothingFactor=smoothingFactor)
+    print("Network training took", str(time() - startTime), "seconds.")
 
     x = np.arange(0, len(trainingErrors))
     trainingErrorsSmooth = gaussian_filter1d(trainingErrors, smoothingFactor)
@@ -268,31 +268,65 @@ def improvedAgent(originalPixels, grayscalePixels, name):
     plt.legend(loc="best")
     plt.savefig("training-validation-stats.png")
     plt.close(figure)
-    print("Minimum Validation Error:", str(validationErrorsSmooth[minValidationError]))
 
+    startTime = time()
     leftRecoloredPixels = [[[] for j in range(leftPixels.shape[1])] for i in range(leftPixels.shape[0])]
     for r in range(0, leftGrayscalePixels.shape[0]):
         for c in range(0, leftGrayscalePixels.shape[1]):
-            if r == 0 or r == leftPixels.shape[0] - 1 or c == 0 or c == leftPixels.shape[1] - 1:
+            if r == 0 or r == leftGrayscalePixels.shape[0] - 1 or c == 0 or c == leftGrayscalePixels.shape[1] - 1:
                 leftRecoloredPixels[r][c] = np.array([0, 0, 0], dtype=np.uint8)
                 continue
-            testInput = prepareInput(r, c, leftGrayscalePixels)
-            networkOutputs = network.forwardPropagate(testInput, True)
+            trainInput = prepareInput(r, c, leftGrayscalePixels)
+            networkOutputs = network.forwardPropagate(trainInput, True)
             output = 255 * np.array(networkOutputs)
             leftRecoloredPixels[r][c] = np.array(output, dtype=np.uint8)
     leftRecoloredPixels = np.array(leftRecoloredPixels, dtype=np.uint8)
-    image = Image.fromarray(leftRecoloredPixels)
-    image.save(name)
+    print("Calculating left side of image took", str(time() - startTime), "seconds.")
+
+    rightGrayscalePixels = np.fliplr(grayscalePixels[:, int(grayscalePixels.shape[1] / 2):])
+    rightRecoloredPixels = [[[] for j in range(rightGrayscalePixels.shape[1])]
+                            for i in range(rightGrayscalePixels.shape[0])]
+    startTime = time()
+    for r in range(0, rightGrayscalePixels.shape[0]):
+        for c in range(0, rightGrayscalePixels.shape[1]):
+            if r == 0 or r == rightGrayscalePixels.shape[0] - 1 or c == 0 or c == rightGrayscalePixels.shape[1] - 1:
+                rightRecoloredPixels[r][c] = np.array([0, 0, 0], dtype=np.uint8)
+                continue
+            testInput = prepareInput(r, c, rightGrayscalePixels)
+            networkOutputs = network.forwardPropagate(testInput, True)
+            output = 255 * np.array(networkOutputs)
+            rightRecoloredPixels[r][c] = np.array(output, dtype=np.uint8)
+    rightRecoloredPixels = np.fliplr(np.array(rightRecoloredPixels, dtype=np.uint8))
+    print("Predicting right side of image took", str(time() - startTime), "seconds.")
+
+    recalculatedImageArray = [[[] for j in range(originalPixels.shape[1])]
+                              for i in range(originalPixels.shape[0])]
+    for r in range(len(recalculatedImageArray)):
+        for c in range(leftRecoloredPixels.shape[1]):
+            recalculatedImageArray[r][c] = leftRecoloredPixels[r][c]
+        for c in range(rightRecoloredPixels.shape[1]):
+            recalculatedImageArray[r][c + leftRecoloredPixels.shape[1]
+                                      ] = rightRecoloredPixels[r][c]
+    recalculatedImageArray = np.array(recalculatedImageArray, dtype=np.uint8)
+    image = Image.fromarray(recalculatedImageArray)
+    image.save(os.path.join("results", "improved-agent-results-" + str(iteration) + ".png"))
+    print("Overall took", str(time() - overallStartTime), "seconds.")
+    return time() - overallStartTime
 
 
 if __name__ == "__main__":
     originalPixels = getImagePixels("training", "fuji.jpg")
-    opL = originalPixels[:, :int(originalPixels.shape[1] / 2)]
-    name = "improved-agent-training-results-lr-50-nodes-10-sections-1010.png"
-    iterations = 10
-    sumI = 0
+    iterations = 50
+    overallTrainingError = 0
+    overallTestingError = 0
+    overallTime = 0
     for i in range(iterations):
-        improvedAgent(originalPixels, convertToGrayscale(originalPixels), name)
-        newPixels = getImagePixels("", name)
-        sumI += checkQuality2(opL, newPixels)
-    print(sumI / iterations)
+        print("ITERATION", str(i))
+        overallTime += improvedAgent(originalPixels, convertToGrayscale(originalPixels), i)
+        newPixels = getImagePixels("results", "improved-agent-results-" + str(i) + ".png")
+        trainingError, testingError = checkQuality(originalPixels, newPixels)
+        overallTrainingError += trainingError
+        overallTestingError += testingError
+    print("TRAINING ERROR:", str(overallTrainingError / iterations))
+    print("TESTING ERROR:", str(overallTestingError / iterations))
+    print("RUNTIME:", str(overallTime / iterations))
