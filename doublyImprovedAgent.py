@@ -47,7 +47,7 @@ trainLab = []
 for filename in os.listdir('flower/flower_photos'):
     trainLab.append(color.rgb2lab(transform.resize(1.0/255*io.imread('flower/flower_photos/' + filename), target_size)))
     i += 1
-    if(i == 30):
+    if(i == 400):
         break
 trainLab = np.array(trainLab, dtype=float)
 trainLab[:,:,:,0] /= 100
@@ -78,9 +78,9 @@ testLab[:,:,:,2] /= 128
 
 
 m = modelbuilder(1)
-epochs = 100
-batch_size = 5
-output = m.fit(trainLab[:30,:,:,:1], trainLab[:30,:,:,1:], epochs = epochs, batch_size=batch_size, use_multiprocessing=True, validation_split=0.2, verbose=2)
+epochs = 500
+batch_size = 10
+output = m.fit(trainLab[:400,:,:,:1], trainLab[:400,:,:,1:], epochs = epochs, batch_size=batch_size, use_multiprocessing=True, validation_split=0.2)
 
 
 #Performance Graph
@@ -106,7 +106,7 @@ plt.legend(loc='upper right')
 plt.title('Loss')
 built = "Results from " + str(epochs) +" Epochs at " + str(batch_size) + " of " + str(i) + " Images" 
 plt.savefig(built + '.png')
-plt.show()
+#plt.show()
 
 
 out = m.predict(testLab[:30,:,:,:1])
@@ -122,3 +122,4 @@ for i in range(len(out)):
     plt.colorbar()
     plt.grid(False)
     plt.show()
+    plt.savefig(str(i) + '.png')
