@@ -14,7 +14,7 @@ target_size = (256,256)
 
 
 
-def modelbuilder(numlayers):
+def modelbuilder():
     model = Sequential()    
     model.add(layers.experimental.preprocessing.RandomFlip("horizontal",input_shape=(256, 256, 1)))
     model.add(layers.experimental.preprocessing.RandomRotation(0.1))
@@ -77,9 +77,10 @@ testLab[:,:,:,1] /= 128
 testLab[:,:,:,2] /= 128
 
 
-m = modelbuilder(1)
-epochs = 500
-batch_size = 10
+m = modelbuilder()
+m.save("model")
+epochs = 600
+batch_size = 40
 output = m.fit(trainLab[:400,:,:,:1], trainLab[:400,:,:,1:], epochs = epochs, batch_size=batch_size, use_multiprocessing=True, validation_split=0.2)
 
 
