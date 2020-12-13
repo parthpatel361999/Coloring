@@ -15,20 +15,14 @@ from string import ascii_uppercase
 
 def modelbuilder():
     model = Sequential()
-    
-    model.add(Conv2D(64, (16, 16),strides = (1,1), activation='relu', padding='same',input_shape=(256, 256, 3)))
-    model.add(Dense(128,activation="relu"))
-    model.add(Dense(64,activation="relu"))
-    model.add(Dense(64,activation="relu"))
-    model.add(Dense(32,activation="relu"))
-    model.add(Conv2D(1, (32, 32), strides = (1,1) ,activation="softmax", padding='same'))
-    model.compile(optimizer='adam', loss = 'binary_crossentropy', metrics=['accuracy'])
+    model.add(Conv2D(1, (2, 2),strides = (1,1), activation='sigmoid', padding='same',input_shape=(256, 256, 3)))
+    model.compile(optimizer='rmsprop', loss = 'mse', metrics=['accuracy'])
     
     model.summary()
     return model
 
 
-def drawText(filepath, fontsize, text,target_size):
+def drawText(filepath, fontsize, text,target_size,color):
     image = Image.open(filepath)
     image = image.resize(target_size) #resize image 
     draw = ImageDraw.Draw(image)
@@ -36,19 +30,17 @@ def drawText(filepath, fontsize, text,target_size):
     size = font.getsize(text)
     x = randint(size[0]+16,255-16-size[0])
     y = randint(size[1]+16,255-16-size[1])
-    color = 'rgb(0,0,0)' #black
-
+    print(color)
     draw.text((x,y), text, fill=color, font=font)
     #image.save('InpaintedImage.png')
     #image.close()
     
     #draw expected output from model 1
     
-    x0 = x + 0.5*size[0] - 8
-    y1 = y + 0.5*fontsize + 8
-    x1 = x + 0.5*size[0] + 8
-    y0 = y + 0.5*fontsize - 8
-    print((int(x0),int(y0),int(x1),int(y1)))
+    x0 = x + 0.5*size[0] - 16
+    y1 = y + 0.5*fontsize + 16
+    x1 = x + 0.5*size[0] + 16 
+    y0 = y + 0.5*fontsize - 16
     #draw input for model 2
     image3 = Image.open(filepath).resize(target_size)
 
@@ -67,16 +59,17 @@ expOutM1 = []
 
 testTextImages = []
 
-size = 1
-fontsize = 15
+size = 300
+fontsize = 30
 
-validation_message = "v"
+validation_message = "H"
 
 i = 0
 for filename in os.listdir('flower/flower_photos'):
     #message = ''.join(choices(ascii_uppercase, k = 1))  #randomize length of message and randomize message 
     message = "H"
-    images = drawText('flower/flower_photos/' + filename,fontsize,message,target_size)
+    c = 'rgb(' + str(randint(0,255)) + ',' + str(randint(0,255)) + ',' + str(randint(0,255)) + ')' #black
+    images = drawText('flower/flower_photos/' + filename,fontsize,message,target_size,c)
     textImages.append(np.array(images[0],dtype = float))
     temp = np.zeros(shape = (256,256,3), dtype=float)
     x0 = images[1][0]
@@ -93,11 +86,12 @@ for filename in os.listdir('flower/flower_photos'):
 
 i = 0
 for filename in os.listdir('testingImages'):
-    images = drawText('testingImages/' + filename,fontsize,validation_message,target_size)
+
+    images = drawText('testingImages/' + filename,fontsize,validation_message,target_size,'rgb(0,0,0)')
     images[0].save('testingImagesWithText/' + filename)
     testTextImages.append(np.array(images[0],dtype = float))
     i += 1
-    if(i == 1):
+    if(i == 15):
         break
 
 textImages = np.array(textImages)
@@ -146,14 +140,13 @@ model 2: RGB image with white box around text.
 
 m = modelbuilder()
 
-m.fit(x=textImages[:size][:][:][:],y=expOutM1[:size][:][:][:],batch_size=1,epochs=10,validation_split=0,use_multiprocessing=True)
-results = m.predict(textImages[:1][:][:][:])
+m.fit(x=textImages[:size][:][:][:],y=expOutM1[:size][:][:][:],batch_size=25,epochs=50,validation_split=0.2,use_multiprocessing=True)
+results = m.predict(testTextImages[:15][:][:][:])
 
-'''
 i = 0
 for images in results: 
-    plt.imshow(images)
+    print(images)
+    plt.imshow(color.gray2rgb(images[:,:,0]))
     plt.savefig('results/' + str(i) + ".png")
     plt.show()
     i +=1
-'''
