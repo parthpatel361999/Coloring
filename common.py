@@ -29,13 +29,13 @@ def colorDistance(color1, color2):
     return sqrt(2 * (intColor1[0] - intColor2[0])**2 + 4 * (intColor1[1] - intColor2[1])**2 + 3 * (intColor1[2] - intColor2[2])**2)
 
 
-def getSection(r, c, pixels):
+def getSection(r, c, pixels, singleValue=False):
     neighbors = [(r - 1, c - 1), (r - 1, c), (r - 1, c + 1), (r, c - 1),
                  (r, c), (r, c + 1), (r + 1, c - 1), (r + 1, c), (r + 1, c + 1)]
     section = []
     for neighbor in neighbors:
         nR, nC = neighbor
-        section.append(pixels[nR, nC])
+        section.append([pixels[nR, nC, 0]] if singleValue else pixels[nR, nC])
     return np.array(section, dtype=np.uint8)
 
 

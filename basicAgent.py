@@ -1,7 +1,4 @@
-<<<<<<< HEAD
-=======
 import os
->>>>>>> improved-agent/master
 from queue import PriorityQueue
 from random import randint
 from sys import maxsize
@@ -10,11 +7,8 @@ from time import time
 import numpy as np
 from PIL import Image
 
-<<<<<<< HEAD
-from common import convertToGrayscale, getImagePixels, colorDistance, checkQuality
-=======
-from common import colorDistance, convertToGrayscale, getImagePixels
->>>>>>> improved-agent/master
+from common import (checkQuality, colorDistance, convertToGrayscale,
+                    getImagePixels, getSection)
 
 
 class Comparison:
@@ -117,19 +111,6 @@ def basicAgent(originalPixels, grayscalePixels):
     image.save(os.path.join("results", "basic-agent-results-.png"))
 
 
-def getSection(r, c, pixels):
-    neighbors = [(r - 1, c - 1), (r - 1, c), (r - 1, c + 1), (r, c - 1),
-                 (r, c), (r, c + 1), (r + 1, c - 1), (r + 1, c), (r + 1, c + 1)]
-    section = []
-    for neighbor in neighbors:
-        nR, nC = neighbor
-        section.append(pixels[nR, nC])
-    return np.array(section, dtype=np.uint8)
-
-<<<<<<< HEAD
-=======
-
->>>>>>> improved-agent/master
 def kMeans(pixels, k, distance=colorDistance):
     firstIteration = True
     centers = []
