@@ -158,17 +158,57 @@ textImages[:,:,:,:] /= 255
 noTextImages[:,:,:,:] /= 255
 testTextImages[:,:,:,:] /= 255
 
+'''
+Flow:
+input: RGB image with text
+output: white image with black text in correct location (ie, is there text on this image? where?)
+
+output will have shape (size,256,256,3). need to find the spot of text on the image:
+    1) convert back to Image
+    2) scan through pixel coordinates (x,y) to find nonwhite pixel, record corner
+    3) 
+
+m2.input: (RGB image with text) - output = RGB image with white box covering text
+m2.output: rectangle of pixles that corresponds to the white box
+
 # plt.imshow(textImages[0])
 # plt.show()
 # plt.imshow(expOutM1[0])
 # plt.show()
 
+Training: 
+model 1: have all info
+model 2: RGB image with white box around text. 
+'''
+
+epochs = 200
 #m = modelbuilder()
-#mc = ModelCheckpoint('best_model.h5', monitor='val_loss', mode='min', verbose=1, save_best_only=True)
-#m.fit(x=textImages[:size][:][:][:],y=expOutM1[:size][:][:][:],batch_size=50,epochs=150,validation_split=0.2,use_multiprocessing=True,callbacks = mc)
+#es = EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=5)
+#mc = ModelCheckpoint('best_model.h5', monitor='val_accuracy', mode='max', verbose=1, save_best_only=True)
+#history = m.fit(x=textImages[:size][:][:][:],y=expOutM1[:size][:][:][:],batch_size=25,epochs=epochs,validation_split=0.2,use_multiprocessing=True,callbacks=[es, mc])
+
+#plot history
+
+# plt.figure(figsize = (10,10))
+# plt.subplot(1,2,1)
+# epochs_range = range(epochs)
+# plt.plot(epochs_range, history.history['accuracy'], label = 'Training Accuracy')
+# plt.plot(epochs_range, history.history['val_accuracy'], label = "validation Accuracy")
+# plt.legend(loc = 'lower right')
+# plt.title('Accuracy Results')
+
+# plt.subplot(1,2,2)
+# plt.plot(epochs_range, history.history['loss'], label = 'Training Loss')
+# plt.plot(epochs_range, history.history['val_loss'], label = "Validation Loss")
+# plt.legend(loc = 'upper right')
+# plt.title('Loss Results')
+
+# plt.savefig("results.png")
+# plt.show()
+
+#run predictions
 saved_model = load_model('best_model.h5')
 results = saved_model.predict(testTextImages[:15][:][:][:])
-
 i = 0
 for images in results: 
     gray = color.gray2rgb(images[:,:,0])
