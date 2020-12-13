@@ -12,6 +12,8 @@ import matplotlib.pyplot as plt
 import pathlib
 from random import randint,choices
 from string import ascii_uppercase
+from keras.callbacks import EarlyStopping, ModelCheckpoint
+from keras.models import Sequential, load_model
 
 def modelbuilder():
     model = Sequential()
@@ -139,9 +141,11 @@ model 2: RGB image with white box around text.
 
 
 m = modelbuilder()
-
-m.fit(x=textImages[:size][:][:][:],y=expOutM1[:size][:][:][:],batch_size=25,epochs=50,validation_split=0.2,use_multiprocessing=True)
-results = m.predict(testTextImages[:15][:][:][:])
+es = EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=5)
+mc = ModelCheckpoint('best_model.h5', monitor='val_accuracy', mode='max', verbose=1, save_best_only=True)
+m.fit(x=textImages[:size][:][:][:],y=expOutM1[:size][:][:][:],batch_size=25,epochs=50,validation_split=0.2,use_multiprocessing=True,callbacks=[es, mc])
+saved_model = load_model('best_model.h5')
+results = saved_model.predict(testTextImages[:15][:][:][:])
 
 i = 0
 for images in results: 
