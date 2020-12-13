@@ -44,11 +44,7 @@ def drawText(filepath, fontsize, text,target_size,color):
     x1 = x + 0.5*size[0] + 16 
     y0 = y + 0.5*fontsize - 16
     #draw input for model 2
-    image3 = Image.open(filepath).resize(target_size)
-
-    draw = ImageDraw.Draw(image3)
-    draw.rectangle(xy = [(x0,y0),(x1,y1)], fill = "#FFFFFF",outline = "white")
-    return image,(int(x0),int(y0),int(x1),int(y1)),image3
+    return image,(int(x0),int(y0),int(x1),int(y1))
 
 
 #initialization variables
@@ -56,7 +52,6 @@ target_size = (256,256)
 
 textImages = []
 noTextImages = []
-textImagesRectangle = []
 expOutM1 = []
 
 testTextImages = []
@@ -80,7 +75,6 @@ for filename in os.listdir('flower/flower_photos'):
     y1 = images[1][3]    
     temp[y0:y1,x0:x1,:] = 1.0
     expOutM1.append(temp)
-    textImagesRectangle.append(np.array(images[2],dtype = float))
     noTextImages.append(np.array(Image.open('flower/flower_photos/' + filename).resize(target_size),dtype = float))
     i += 1
     if(i == size):
@@ -97,7 +91,6 @@ for filename in os.listdir('testingImages'):
         break
 
 textImages = np.array(textImages)
-textImagesRectangle = np.array(textImagesRectangle)
 noTextImages = np.array(noTextImages)
 expOutM1 = np.array(expOutM1)
 
@@ -105,18 +98,15 @@ testTextImages = np.array(testTextImages)
 
 textImages[:,:,:,:] /= 255
 noTextImages[:,:,:,:] /= 255
-textImagesRectangle[:,:,:,:] /= 255
-
+testTextImages[:,:,:,:] /= 255
 
 plt.imshow(textImages[0])
 plt.show()
 plt.imshow(expOutM1[0])
 plt.show()
-plt.imshow(textImagesRectangle[0])
-plt.show()
 
-testTextImages[:,:,:,:] /= 255
-#need to find smallest rectange that contains text, then fill that box with white
+
+
 
 '''
 Flow:
@@ -139,14 +129,33 @@ model 1: have all info
 model 2: RGB image with white box around text. 
 '''
 
-
+epochs = 50
 m = modelbuilder()
 es = EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=5)
 mc = ModelCheckpoint('best_model.h5', monitor='val_accuracy', mode='max', verbose=1, save_best_only=True)
-m.fit(x=textImages[:size][:][:][:],y=expOutM1[:size][:][:][:],batch_size=25,epochs=50,validation_split=0.2,use_multiprocessing=True,callbacks=[es, mc])
+history = m.fit(x=textImages[:size][:][:][:],y=expOutM1[:size][:][:][:],batch_size=25,epochs=epochs,validation_split=0.2,use_multiprocessing=True,callbacks=[es, mc])
+
+#plot history
+plt.figure(figsize = (10,10))
+plt.subplot(1,2,1)
+epochs_range = range(epochs)
+plt.plot(epochs_range, history.history['accuracy'], label = 'Training Accuracy')
+plt.plot(epochs_range, history.history['val_accuracy'], label = "validation Accuracy")
+plt.legend(loc = 'lower right')
+plt.title('Accuracy Results')
+
+plt.subplot(1,2,2)
+plt.plot(epochs_range, history.history['loss'], label = 'Training Loss')
+plt.plot(epochs_range, history.history['val_loss'], label = "Validation Loss")
+plt.legend(loc = 'upper right')
+plt.title('Loss Results')
+
+plt.savefig("results.png")
+plt.show()
+
+#run predictions
 saved_model = load_model('best_model.h5')
 results = saved_model.predict(testTextImages[:15][:][:][:])
-
 i = 0
 for images in results: 
     print(images)
