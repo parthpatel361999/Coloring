@@ -182,7 +182,7 @@ def prepareInput(r, c, pixels, numSections=(15, 3)):
     rowSections, colSections = numSections
     rowDividers = np.linspace(0, pixels.shape[0], rowSections)
     colDividers = np.linspace(0, pixels.shape[1], colSections)
-    patch = getSection(r, c, pixels, True) / 255.0
+    patch = getSection(r, c, pixels) / 255.0
     extraInputAttributes = []
     rowIndex = 0
     for i in range(len(rowDividers)):
@@ -322,7 +322,7 @@ if __name__ == "__main__":
     overallTime = 0
     for i in range(iterations):
         print("ITERATION", str(i))
-        overallTime += improvedAgent(originalPixels, convertToGrayscale(originalPixels), i)
+        overallTime += improvedAgent(originalPixels, convertToGrayscale(originalPixels, True), i)
         newPixels = getImagePixels("results", "improved-agent-results-" + str(i) + ".png")
         trainingError, testingError = checkQuality(originalPixels, newPixels)
         overallTrainingError += trainingError

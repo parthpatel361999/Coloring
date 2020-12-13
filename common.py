@@ -5,20 +5,22 @@ import numpy as np
 from PIL import Image
 
 
-def getImagePixels(directory, fileName):
+def getImagePixels(directory, fileName, resize=None):
     filePath = os.path.join(directory, fileName)
     image = Image.open(filePath)
+    if resize is not None:
+        image = image.resize(resize)
     return np.asarray(image)
 
 
-def convertToGrayscale(pixels):
-    grayscalePixels = np.zeros(shape=pixels.shape)
+def convertToGrayscale(pixels, singleValue=False):
+    grayscalePixels = [[[] for j in range(pixels.shape[1])] for i in range(pixels.shape[0])]
     for i in range(pixels.shape[0]):
         for j in range(pixels.shape[1]):
             rgb = pixels[i, j]
             gray = 0.21 * rgb[0] + 0.72 * rgb[1] + 0.07 * rgb[2]
-            grayscalePixels[i, j] = [gray, gray, gray]
-    return grayscalePixels
+            grayscalePixels[i][j] = [gray] if singleValue else [gray, gray, gray]
+    return np.array(grayscalePixels, dtype=np.uint8)
 
 
 def colorDistance(color1, color2):
@@ -27,13 +29,13 @@ def colorDistance(color1, color2):
     return sqrt(2 * (intColor1[0] - intColor2[0])**2 + 4 * (intColor1[1] - intColor2[1])**2 + 3 * (intColor1[2] - intColor2[2])**2)
 
 
-def getSection(r, c, pixels, grayscale=False):
+def getSection(r, c, pixels):
     neighbors = [(r - 1, c - 1), (r - 1, c), (r - 1, c + 1), (r, c - 1),
                  (r, c), (r, c + 1), (r + 1, c - 1), (r + 1, c), (r + 1, c + 1)]
     section = []
     for neighbor in neighbors:
         nR, nC = neighbor
-        section.append(pixels[nR, nC][0] if grayscale else pixels[nR, nC])
+        section.append(pixels[nR, nC])
     return np.array(section, dtype=np.uint8)
 
 
