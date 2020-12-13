@@ -2,18 +2,20 @@ import os
 import pathlib
 from math import sqrt
 
+import keras.optimizers
 import numpy as np
 import tensorflow as tf
 import tensorflow_datasets as tfds
+from keras.callbacks import EarlyStopping, ModelCheckpoint
 from keras.layers import Conv2D, Dense, MaxPooling2D, UpSampling2D
 from keras.layers.convolutional import Conv2DTranspose
-from keras.models import Sequential
+from keras.models import Sequential, load_model
 from PIL import Image
 
 from common import convertToGrayscale, getImagePixels
 
 validationSplit = 0.2
-trainingSize = 500
+trainingSize = 400
 trainingInputs = []
 validationInputs = []
 trainingExpected = []
@@ -39,23 +41,28 @@ validationExpected = np.array(validationExpected, dtype=np.uint8) / 255
 
 
 model = Sequential()
-model.add(Conv2D(32, kernel_size=(3, 3), activation='sigmoid', kernel_initializer='he_normal', padding="same", input_shape=(
+model.add(Dense(16, activation="relu", kernel_initializer="he_uniform", input_shape=(
     trainingInputs.shape[1], trainingInputs.shape[2], trainingInputs.shape[3])))
-# model.add(Conv2D(5, kernel_size=(3, 3), activation='relu', kernel_initializer='he_normal'))
-# model.add(Conv2D(8, kernel_size=(3, 3), activation='relu', kernel_initializer='he_normal'))
-# model.add(Conv2DTranspose(8, kernel_size=(3, 3), activation='relu', kernel_initializer='he_normal'))
-# model.add(Conv2DTranspose(5, kernel_size=(3, 3), activation='relu', kernel_initializer='he_normal'))
-# model.add(Conv2DTranspose(5, kernel_size=(3, 3), activation='relu', kernel_initializer='he_normal'))
-# model.add(Conv2D(3, kernel_size=(3, 3), activation='sigmoid', padding='same'))
-model.add(Dense(32, activation="sigmoid", kernel_initializer="he_normal"))
-model.add(Dense(3, activation="sigmoid", kernel_initializer="he_normal"))
+# model.add(Conv2D(8, (2, 2), activation='relu', kernel_initializer='he_uniform', padding='same', input_shape=(
+#     trainingInputs.shape[1], trainingInputs.shape[2], trainingInputs.shape[3])))
+# # model.add(MaxPooling2D((2, 2), padding='same'))
+# # model.add(Conv2D(8, (2, 2), activation='relu', kernel_initializer='he_uniform', padding='same'))
+# # model.add(MaxPooling2D((2, 2), padding='same'))
+# # model.add(Conv2D(8, (2, 2), activation='relu', kernel_initializer='he_uniform', padding='same'))
+# # model.add(UpSampling2D((2, 2), interpolation='bilinear'))
+# model.add(Conv2DTranspose(8, kernel_size=(2, 2), activation='relu', kernel_initializer='he_normal', padding="same"))
+model.add(Conv2D(3, (2, 2), activation='sigmoid', padding='same'))
 
 model.summary()
+opt = keras.optimizers.Adam(learning_rate=0.1)
 model.compile(loss='mse',
-              optimizer='adam',
+              optimizer=opt,
               metrics=['accuracy'])
-model.fit(trainingInputs, trainingExpected, batch_size=40, epochs=100,
-          validation_data=(validationInputs, validationExpected), verbose=1)
+es = EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=5)
+mc = ModelCheckpoint('best_model.h5', monitor='val_accuracy', mode='max', verbose=1, save_best_only=True)
+model.fit(trainingInputs, trainingExpected, batch_size=40, epochs=50,
+          validation_data=(validationInputs, validationExpected), verbose=1, callbacks=[es, mc])
+saved_model = load_model('best_model.h5')
 
 testInputs = []
 testDir = "testingimages"
