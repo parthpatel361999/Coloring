@@ -46,14 +46,46 @@ def drawText(filepath, fontsize, text,target_size,color):
     #draw input for model 2
     return image,(int(x0),int(y0),int(x1),int(y1))
 
+def getNeighbors(r, c, buffer):
+    neighbors = [(r - buffer, c - buffer), (r - buffer, c), (r - buffer, c + buffer), (r, c - buffer),
+                 (r, c + buffer), (r + buffer, c - buffer), (r + buffer, c), (r + buffer, c + buffer)]
+    section = []
+    for neighbor in neighbors:
+        nR, nC = neighbor
+        if nR >= 0 and nR < 256 and nC >= 0 and nC < 256:
+            section.append([nR, nC])
+    return section
+
 def smooth(rgb_with_text, gray_detected_text):
     detectedPixels = []
     for r in range(256):
         for c in range(256):
             if gray_detected_text[r, c] > 0.90:
                 detectedPixels.append([r, c])
-                print([r, c])
-    dP = np.array(detectedPixels)
+    length = len(detectedPixels)
+    for i in range(length):
+        neighbors = getNeighbors(detectedPixels[i][0], detectedPixels[i][1], 1)
+        for neighbor in neighbors:
+            if neighbor not in detectedPixels:
+                detectedPixels.append(neighbor)
+
+    for loc in detectedPixels:
+        neighbors = getNeighbors(loc[0], loc[1], 3)
+        averagedPixel = [0, 0, 0]
+        numPixels = 0
+        for neighbor in neighbors:
+            if neighbor not in detectedPixels:
+                averagedPixel[0] += rgb_with_text[neighbor[0]][neighbor[1]][0]
+                averagedPixel[1] += rgb_with_text[neighbor[0]][neighbor[1]][1]
+                averagedPixel[2] += rgb_with_text[neighbor[0]][neighbor[1]][2]
+                numPixels += 1
+        if numPixels > 0:
+            averagedPixel[0] /= numPixels
+            averagedPixel[1] /= numPixels
+            averagedPixel[2] /= numPixels
+            rgb_with_text[loc[0]][loc[1]] = averagedPixel
+
+    '''        
     for loc in detectedPixels:
         r, c = loc[0], loc[1]
         average = [0, 0, 0]
@@ -103,6 +135,7 @@ def smooth(rgb_with_text, gray_detected_text):
             average[1] /= weight
             average[2] /= weight
             rgb_with_text[r, c] = average
+    '''
     return rgb_with_text
 #initialization variables
 target_size = (256,256)
