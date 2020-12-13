@@ -3,3 +3,5 @@
 __pycache__/
 results/
 test.py
+grayscaleFlowers/
+flower_photos/

@@ -5,7 +5,6 @@ from math import sqrt
 import keras.optimizers
 import numpy as np
 import tensorflow as tf
-import tensorflow_datasets as tfds
 from keras.callbacks import EarlyStopping, ModelCheckpoint
 from keras.layers import Conv2D, Dense, MaxPooling2D, UpSampling2D
 from keras.layers.convolutional import Conv2DTranspose
@@ -21,17 +20,18 @@ validationInputs = []
 trainingExpected = []
 validationExpected = []
 
-trainingDir = "flower_photos"
-trainingEntries = os.listdir(trainingDir)
+trainingInputsDir = "grayscaleFlowers"
+trainingExpectedDir = "flower_photos"
+trainingEntries = os.listdir(trainingInputsDir)
 for i in range(trainingSize):
-    pixels = getImagePixels(trainingDir, trainingEntries[i], (256, 256))
-    grayscalePixels = convertToGrayscale(pixels, True)
+    grayscalePixels = getImagePixels(trainingInputsDir, trainingEntries[i])
+    expectedPixels = getImagePixels(trainingExpectedDir, trainingEntries[i])
     if i >= (1 - validationSplit) * trainingSize:
         validationInputs.append(grayscalePixels)
-        validationExpected.append(pixels)
+        validationExpected.append(expectedPixels)
     else:
         trainingInputs.append(grayscalePixels)
-        trainingExpected.append(pixels)
+        trainingExpected.append(expectedPixels)
 
 trainingInputs = np.array(trainingInputs, dtype=np.uint8) / 255
 trainingExpected = np.array(trainingExpected, dtype=np.uint8) / 255
@@ -41,16 +41,16 @@ validationExpected = np.array(validationExpected, dtype=np.uint8) / 255
 
 
 model = Sequential()
-model.add(Dense(16, activation="relu", kernel_initializer="he_uniform", input_shape=(
-    trainingInputs.shape[1], trainingInputs.shape[2], trainingInputs.shape[3])))
-# model.add(Conv2D(8, (2, 2), activation='relu', kernel_initializer='he_uniform', padding='same', input_shape=(
+# model.add(Dense(8, activation="relu", kernel_initializer="he_uniform", input_shape=(
 #     trainingInputs.shape[1], trainingInputs.shape[2], trainingInputs.shape[3])))
+model.add(Conv2D(8, (3, 3), activation='relu', kernel_initializer='he_uniform', padding='same', input_shape=(
+    trainingInputs.shape[1], trainingInputs.shape[2], trainingInputs.shape[3])))
+# model.add(MaxPooling2D((2, 2), padding='same'))
+# model.add(Conv2D(8, (2, 2), activation='relu', kernel_initializer='he_uniform', padding='same'))
 # # model.add(MaxPooling2D((2, 2), padding='same'))
 # # model.add(Conv2D(8, (2, 2), activation='relu', kernel_initializer='he_uniform', padding='same'))
-# # model.add(MaxPooling2D((2, 2), padding='same'))
-# # model.add(Conv2D(8, (2, 2), activation='relu', kernel_initializer='he_uniform', padding='same'))
-# # model.add(UpSampling2D((2, 2), interpolation='bilinear'))
-# model.add(Conv2DTranspose(8, kernel_size=(2, 2), activation='relu', kernel_initializer='he_normal', padding="same"))
+# model.add(UpSampling2D((2, 2), interpolation='bilinear'))
+model.add(Conv2DTranspose(16, kernel_size=(3, 3), activation='relu', kernel_initializer='he_normal', padding="same"))
 model.add(Conv2D(3, (2, 2), activation='sigmoid', padding='same'))
 
 model.summary()
@@ -68,10 +68,10 @@ testInputs = []
 testDir = "testingimages"
 testEntries = os.listdir(testDir)
 for entry in testEntries:
-    testInputs.append(convertToGrayscale(getImagePixels(testDir, entry, (256, 256)), True))
+    testInputs.append(convertToGrayscale(getImagePixels(testDir, entry, (256, 256))))
 testInputs = np.array(testInputs, dtype=np.uint8) / 255.
 
-testResults = model.predict(testInputs) * 255.
+testResults = saved_model.predict(testInputs) * 255.
 for i in range(len(testResults)):
     result = np.array(testResults[i], dtype=np.uint8)
     image = Image.fromarray(result)
