@@ -6,7 +6,7 @@ from tensorflow import keras
 from tensorflow.keras import layers
 from tensorflow.keras.models import Sequential
 from skimage import color, io, transform
-from keras.layers import Conv2D, UpSampling2D, Dropout
+from keras.layers import Conv2D, UpSampling2D, Dropout, Dense
 import matplotlib.pyplot as plt
 import pathlib
 from random import randint
@@ -20,9 +20,9 @@ def modelbuilder():
     model.add(layers.experimental.preprocessing.RandomRotation(0.1))
     model.add(layers.experimental.preprocessing.RandomZoom(0.1))
     model.add(Conv2D(64, (3, 3), activation='relu', padding='same'))
-    model.add(Dropout(0.1))
+    #model.add(Dropout(0.1))
     model.add(Conv2D(64, (3, 3), activation='relu', padding='same', strides=2))
-    model.add(Dropout(0.1))
+    #model.add(Dropout(0.1))
     model.add(Conv2D(128, (3, 3), activation='relu', padding='same'))
     model.add(Conv2D(128, (3, 3), activation='relu', padding='same', strides=2))
     model.add(Conv2D(256, (3, 3), activation='relu', padding='same'))
@@ -79,7 +79,7 @@ testLab[:,:,:,2] /= 128
 
 m = modelbuilder()
 m.save("model")
-epochs = 600
+epochs = 100
 batch_size = 40
 output = m.fit(trainLab[:400,:,:,:1], trainLab[:400,:,:,1:], epochs = epochs, batch_size=batch_size, use_multiprocessing=True, validation_split=0.2)
 
@@ -122,5 +122,5 @@ for i in range(len(out)):
     plt.imshow(img) 
     plt.colorbar()
     plt.grid(False)
-    plt.savefig(str(i) + '.png')
+    plt.savefig(str(i) + 'try.png')
     plt.show()
