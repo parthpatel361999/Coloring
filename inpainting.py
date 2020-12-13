@@ -7,7 +7,7 @@ from tensorflow import keras
 from tensorflow.keras import layers
 from tensorflow.keras.models import Sequential
 from skimage import color, io, transform
-from keras.layers import Conv2D, UpSampling2D, Dropout
+from keras.layers import Conv2D, UpSampling2D, Dropout, Dense
 import matplotlib.pyplot as plt
 import pathlib
 from random import randint,choices
@@ -15,31 +15,16 @@ from string import ascii_letters, digits
 
 def modelbuilder():
     model = Sequential()
-    model.add(layers.experimental.preprocessing.RandomRotation(0.1,input_shape=(256, 256, 3)))
-    model.add(layers.experimental.preprocessing.RandomZoom(0.1))
+    model.add(layers.experimental.preprocessing.RandomRotation(0.05, input_shape = (256,256,3)))
     model.add(Conv2D(64, (3, 3), activation='relu', padding='same'))
-    model.add(Dropout(0.1))
-    model.add(Conv2D(64, (3, 3), activation='relu', padding='same', strides=2))
-    model.add(Dropout(0.1))
-    model.add(Conv2D(128, (3, 3), activation='relu', padding='same'))
-    model.add(Conv2D(128, (3, 3), activation='relu', padding='same', strides=2))
-    model.add(Conv2D(256, (3, 3), activation='relu', padding='same'))
-    model.add(Conv2D(256, (3, 3), activation='relu', padding='same', strides=2))
-    model.add(Conv2D(512, (3, 3), activation='relu', padding='same'))
-    model.add(Conv2D(512, (3, 3), activation='relu', padding='same'))
-    model.add(Conv2D(256, (3, 3), activation='relu', padding='same'))
-    model.add(Conv2D(128, (3, 3), activation='relu', padding='same'))
-    model.add(UpSampling2D((2, 2)))
-    model.add(Conv2D(64, (3, 3), activation='relu', padding='same'))
-    model.add(UpSampling2D((2, 2)))
-    model.add(Conv2D(32, (3, 3), activation='relu', padding='same'))
-    model.add(Conv2D(3, (3, 3), activation='tanh', padding='same'))
-    model.add(UpSampling2D((2, 2)))
+    model.add(Dense(64))#, activation='tanh'))
+    #model.add(Conv2D(3, (3, 3), activation='relu', padding='same'))
+    model.add(Dense(3))#, activation='sigmoid'))
+ 
 
-    model.compile(optimizer='rmsprop', loss = 'mse', metrics=['accuracy'])
+    model.compile(optimizer='adam', loss = 'mse', metrics=['accuracy'])
     model.summary()
     return model
-
 
 def drawText(filepath, fontsize, text,target_size):
     image = Image.open(filepath)
@@ -78,7 +63,7 @@ expOutM1 = []
 
 testTextImages = []
 
-size = 100
+size = 600
 fontsize = 15
 
 validation_message = "val"
@@ -86,7 +71,7 @@ validation_message = "val"
 i = 0
 for filename in os.listdir('flower/flower_photos'):
     message = "message" #randomize length of message and randomize message 
-    images = drawText('flower/flower_photos/' + filename,fontsize,message,target_size)
+    images = drawText('flower/flower_photos/' + filename, fontsize, message, target_size)
     textImages.append(np.array(images[0],dtype = float))
     expOutM1.append(np.array(images[1],dtype = float))
     textImagesRectangle.append(np.array(images[2],dtype = float))
@@ -95,11 +80,11 @@ for filename in os.listdir('flower/flower_photos'):
     if(i == size):
         break
 
-
 i = 0
 for filename in os.listdir('testingImages'):
     images = drawText('testingImages/' + filename,fontsize,validation_message,target_size)
     testTextImages.append(np.array(images[0],dtype = float))
+    io.imsave("testingWithText/" + str(i) + ".png", testTextImages[i])
     i += 1
     if(i == 15):
         break
@@ -115,13 +100,15 @@ textImages[:,:,:,:] /= 255
 noTextImages[:,:,:,:] /= 255
 expOutM1[:,:,:,:] /= 255
 textImagesRectangle[:,:,:,:] /= 255
-
-plt.imshow(textImages[0])
-plt.show()
-plt.imshow(expOutM1[0])
-plt.show()
-
 testTextImages[:,:,:,:] /= 255
+
+# plt.imshow(textImages[0])
+# plt.show()
+# plt.imshow(noTextImages[0])
+# plt.show()
+# plt.imshow(testTextImages[0])
+# plt.show()
+
 #need to find smallest rectange that contains text, then fill that box with white
 
 '''
@@ -146,16 +133,13 @@ model 2: RGB image with white box around text.
 '''
 
 
-'''
+
 m = modelbuilder()
-m.fit(x=textImages[:size][:][:][:],y=expOutM1[:size][:][:][:],batch_size=20,epochs=10,validation_split=0.2,use_multiprocessing=True)
-results = m.predict(testTextImages[:15][:][:][:])
+m.fit(x=textImages[:50][:][:][:],y=noTextImages[:50][:][:][:],batch_size=10,epochs=40,use_multiprocessing=True, validation_split=0.1)
+results = m.predict(testTextImages[:30][:][:][:])
 
 
 i = 0
-for images in results: 
-    plt.imshow(images)
-    plt.savefig('results/' + str(i) + ".png")
-    plt.show()
+for images in results:
+    io.imsave('results/' + str(i) + ".png", images)
     i +=1
-'''
