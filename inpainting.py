@@ -44,24 +44,76 @@ def drawText(filepath, fontsize, text,target_size,color):
     x1 = x + 0.5*size[0] + 16 
     y0 = y + 0.5*fontsize - 16
     #draw input for model 2
-    image3 = Image.open(filepath).resize(target_size)
+    return image,(int(x0),int(y0),int(x1),int(y1))
 
-    draw = ImageDraw.Draw(image3)
-    draw.rectangle(xy = [(x0,y0),(x1,y1)], fill = "#FFFFFF",outline = "white")
-    return image,(int(x0),int(y0),int(x1),int(y1)),image3
-
-
+def smooth(rgb_with_text, gray_detected_text):
+    detectedPixels = []
+    for r in range(256):
+        for c in range(256):
+            if gray_detected_text[r, c] > 0.90:
+                detectedPixels.append([r, c])
+                print([r, c])
+    dP = np.array(detectedPixels)
+    for loc in detectedPixels:
+        r, c = loc[0], loc[1]
+        average = [0, 0, 0]
+        weight = 0
+        if r + 1 < 256 and c + 1 < 256 and [r + 1, c + 1]:
+            average[0] =+ rgb_with_text[r + 1, c + 1, 0]
+            average[1] =+ rgb_with_text[r + 1, c + 1, 1]
+            average[2] =+ rgb_with_text[r + 1, c + 1, 2]
+            weight += 1
+        if r + 1 < 256 and [r + 1, c]:
+            average[0] =+ rgb_with_text[r + 1, c, 0]
+            average[1] =+ rgb_with_text[r + 1, c, 1]
+            average[2] =+ rgb_with_text[r + 1, c, 2]
+            weight += 1
+        if r + 1 < 256 and c - 1 >= 0 and [r + 1, c - 1]:
+            average[0] =+ rgb_with_text[r + 1, c - 1, 0]
+            average[1] =+ rgb_with_text[r + 1, c - 1, 1]
+            average[2] =+ rgb_with_text[r + 1, c - 1, 2]
+            weight += 1
+        if c + 1 < 256 and [r, c + 1]:
+            average[0] =+ rgb_with_text[r, c + 1, 0]
+            average[1] =+ rgb_with_text[r, c + 1, 1]
+            average[2] =+ rgb_with_text[r, c + 1, 2]
+            weight += 1
+        if c - 1 >= 0 and [r, c - 1]:
+            average[0] =+ rgb_with_text[r, c - 1, 0]
+            average[1] =+ rgb_with_text[r, c - 1, 1]
+            average[2] =+ rgb_with_text[r, c - 1, 2]
+            weight += 1
+        if r - 1 >= 0 and c - 1 >= 0 and [r - 1, c - 1]:
+            average[0] =+ rgb_with_text[r - 1, c - 1, 0]
+            average[1] =+ rgb_with_text[r - 1, c - 1, 1]
+            average[2] =+ rgb_with_text[r - 1, c - 1, 2]
+            weight += 1
+        if r - 1 >= 0 and [r - 1, c]:
+            average[0] =+ rgb_with_text[r - 1, c, 0]
+            average[1] =+ rgb_with_text[r - 1, c, 1]
+            average[2] =+ rgb_with_text[r - 1, c, 2]
+            weight += 1
+        if r - 1 >= 0 and c + 1 < 256 and [r - 1, c + 1]:
+            average[0] =+ rgb_with_text[r - 1, c + 1, 0]
+            average[1] =+ rgb_with_text[r - 1, c + 1, 1]
+            average[2] =+ rgb_with_text[r - 1, c + 1, 2]
+            weight += 1
+        if weight != 0:
+            average[0] /= weight
+            average[1] /= weight
+            average[2] /= weight
+            rgb_with_text[r, c] = average
+    return rgb_with_text
 #initialization variables
 target_size = (256,256)
 
 textImages = []
 noTextImages = []
-textImagesRectangle = []
 expOutM1 = []
 
 testTextImages = []
 
-size = 300
+size = 100
 fontsize = 30
 
 validation_message = "H"
@@ -69,9 +121,9 @@ validation_message = "H"
 i = 0
 for filename in os.listdir('flower/flower_photos'):
     #message = ''.join(choices(ascii_uppercase, k = 1))  #randomize length of message and randomize message 
-    message = "H"
-    c = 'rgb(' + str(randint(0,255)) + ',' + str(randint(0,255)) + ',' + str(randint(0,255)) + ')' #black
-    images = drawText('flower/flower_photos/' + filename,fontsize,message,target_size,c)
+    validation_message = ''.join(choices(ascii_uppercase, k = 4))
+    c = 'rgb(' + str(randint(0,255)) + ',' + str(randint(0,255)) + ',' + str(randint(0,255)) + ')'
+    images = drawText('flower/flower_photos/' + filename,fontsize,validation_message,target_size,c)
     textImages.append(np.array(images[0],dtype = float))
     temp = np.zeros(shape = (256,256,3), dtype=float)
     x0 = images[1][0]
@@ -80,77 +132,51 @@ for filename in os.listdir('flower/flower_photos'):
     y1 = images[1][3]    
     temp[y0:y1,x0:x1,:] = 1.0
     expOutM1.append(temp)
-    textImagesRectangle.append(np.array(images[2],dtype = float))
     noTextImages.append(np.array(Image.open('flower/flower_photos/' + filename).resize(target_size),dtype = float))
     i += 1
     if(i == size):
         break
 
+b = 'rgb(0,0,0)'
 i = 0
 for filename in os.listdir('testingImages'):
-
-    images = drawText('testingImages/' + filename,fontsize,validation_message,target_size,'rgb(0,0,0)')
+    validation_message = ''.join(choices(ascii_uppercase, k = 4))
+    c = 'rgb(' + str(randint(0,255)) + ',' + str(randint(0,255)) + ',' + str(randint(0,255)) + ')'
+    images = drawText('testingImages/' + filename, fontsize, validation_message, target_size, b)
     images[0].save('testingImagesWithText/' + filename)
-    testTextImages.append(np.array(images[0],dtype = float))
+    testTextImages.append(np.array(images[0], dtype = float))
     i += 1
     if(i == 15):
         break
 
 textImages = np.array(textImages)
-textImagesRectangle = np.array(textImagesRectangle)
 noTextImages = np.array(noTextImages)
 expOutM1 = np.array(expOutM1)
-
 testTextImages = np.array(testTextImages)
 
 textImages[:,:,:,:] /= 255
 noTextImages[:,:,:,:] /= 255
-textImagesRectangle[:,:,:,:] /= 255
-
-
-plt.imshow(textImages[0])
-plt.show()
-plt.imshow(expOutM1[0])
-plt.show()
-plt.imshow(textImagesRectangle[0])
-plt.show()
-
 testTextImages[:,:,:,:] /= 255
-#need to find smallest rectange that contains text, then fill that box with white
 
-'''
-Flow:
-input: RGB image with text
-output: white image with black text in correct location (ie, is there text on this image? where?)
+# plt.imshow(textImages[0])
+# plt.show()
+# plt.imshow(expOutM1[0])
+# plt.show()
 
-output will have shape (size,256,256,3). need to find the spot of text on the image:
-    1) convert back to Image
-    2) scan through pixel coordinates (x,y) to find nonwhite pixel, record corner
-    3) 
-
-m2.input: (RGB image with text) - output = RGB image with white box covering text
-m2.output: rectangle of pixles that corresponds to the white box
-
-Final output:
-m2.input + m2.output
-
-Training: 
-model 1: have all info
-model 2: RGB image with white box around text. 
-'''
-
-
-m = modelbuilder()
-es = EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=5)
-mc = ModelCheckpoint('best_model.h5', monitor='val_accuracy', mode='max', verbose=1, save_best_only=True)
-m.fit(x=textImages[:size][:][:][:],y=expOutM1[:size][:][:][:],batch_size=25,epochs=50,validation_split=0.2,use_multiprocessing=True,callbacks=[es, mc])
+#m = modelbuilder()
+#mc = ModelCheckpoint('best_model.h5', monitor='val_loss', mode='min', verbose=1, save_best_only=True)
+#m.fit(x=textImages[:size][:][:][:],y=expOutM1[:size][:][:][:],batch_size=50,epochs=150,validation_split=0.2,use_multiprocessing=True,callbacks = mc)
 saved_model = load_model('best_model.h5')
 results = saved_model.predict(testTextImages[:15][:][:][:])
 
 i = 0
 for images in results: 
-    print(images)
-    plt.imshow(color.gray2rgb(images[:,:,0]))
-    plt.savefig('results/' + str(i) + ".png")
+    gray = color.gray2rgb(images[:,:,0])
+    plt.imshow(gray)
+    plt.title("Max: " + str(np.max(gray)) + " Min: " + str(np.min(gray[:,:,0])))
+    #plt.savefig('results/textDetect' + str(i) + ".png")
+    plt.show()
+    smoothed = smooth(testTextImages[i], gray[:,:,0] / np.max(gray))
+    plt.imshow(smoothed)
     plt.show()
     i +=1
