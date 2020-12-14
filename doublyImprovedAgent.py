@@ -77,9 +77,10 @@ if __name__ == "__main__":
     print(trainingInputs.shape)
 
     model = Sequential()
-    model.add(Dense(60, activation="relu", input_shape=(9, 1)))
-    model.add(Dense(60, activation="relu"))
-    model.add(Dense(60, activation="relu"))
+    model.add(Dense(20, activation="relu", input_shape=(9, 1)))
+    model.add(Dense(20, activation="relu"))
+    model.add(Dense(20, activation="relu"))
+    model.add(Dense(20, activation="relu"))
     # model.add(Conv1D(5, 3, strides=1, activation="relu"))
     # model.add(Dense(10, activation="relu"))
     # model.add(Dense(10, activation="relu"))

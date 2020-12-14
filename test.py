@@ -27,4 +27,4 @@ from common import (checkQuality2, colorDistance, convertToGrayscale,
 op = getImagePixels("training", "fuji.jpg")
 op = op[:, int(op.shape[1] / 2):]
 npix = getImagePixels("doublyImprovedResults", "okay.png")
-print(checkQuality2(npix, npix))
+print(checkQuality2(op, npix))
