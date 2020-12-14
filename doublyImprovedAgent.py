@@ -19,24 +19,26 @@ def modelbuilder():
     model.add(layers.experimental.preprocessing.RandomFlip("horizontal",input_shape=(256, 256, 1)))
     model.add(layers.experimental.preprocessing.RandomRotation(0.1))
     model.add(layers.experimental.preprocessing.RandomZoom(0.1))
-    model.add(Conv2D(64, (3, 3), activation='relu', padding='same'))
+    model.add(Conv2D(8, (3, 3), activation='relu', padding='same'))
     #model.add(Dropout(0.1))
-    model.add(Conv2D(64, (3, 3), activation='relu', padding='same', strides=2))
+    model.add(Conv2D(8, (3, 3), activation='relu', padding='same', strides=1))
     #model.add(Dropout(0.1))
-    model.add(Conv2D(128, (3, 3), activation='relu', padding='same'))
-    model.add(Conv2D(128, (3, 3), activation='relu', padding='same', strides=2))
-    model.add(Conv2D(256, (3, 3), activation='relu', padding='same'))
-    model.add(Conv2D(256, (3, 3), activation='relu', padding='same', strides=2))
-    model.add(Conv2D(512, (3, 3), activation='relu', padding='same'))
-    model.add(Conv2D(512, (3, 3), activation='relu', padding='same'))
-    model.add(Conv2D(256, (3, 3), activation='relu', padding='same'))
-    model.add(Conv2D(128, (3, 3), activation='relu', padding='same'))
-    model.add(UpSampling2D((2, 2)))
-    model.add(Conv2D(64, (3, 3), activation='relu', padding='same'))
-    model.add(UpSampling2D((2, 2)))
+    model.add(Conv2D(16, (3, 3), activation='relu', padding='same'))
+    #model.add(Conv2D(128, (3, 3), activation='relu', padding='same', strides=2))
+    #model.add(Conv2D(256, (3, 3), activation='relu', padding='same'))
+    model.add(Conv2D(16, (3, 3), activation='relu', padding='same', strides=1))
     model.add(Conv2D(32, (3, 3), activation='relu', padding='same'))
+    #model.add(UpSampling2D((2, 2)))
+    model.add(Conv2D(32, (3, 3), activation='relu', padding='same'))
+    #model.add(UpSampling2D((2, 2)))
+    model.add(Conv2D(32, (3, 3), activation='relu', padding='same'))
+    #model.add(UpSampling2D((2, 2)))
+    model.add(Conv2D(128, (3, 3), activation='relu', padding='same'))
+    model.add(Conv2D(64, (3, 3), activation='relu', padding='same'))
+    #model.add(UpSampling2D((2, 2)))
+    model.add(Conv2D(16, (3, 3), activation='relu', padding='same'))
     model.add(Conv2D(2, (3, 3), activation='tanh', padding='same'))
-    model.add(UpSampling2D((2, 2)))
+    #model.add(UpSampling2D((2, 2)))
 
     model.compile(optimizer='rmsprop', loss = 'mse', metrics=['accuracy'])
     model.summary()
@@ -47,7 +49,7 @@ trainLab = []
 for filename in os.listdir('flower/flower_photos'):
     trainLab.append(color.rgb2lab(transform.resize(1.0/255*io.imread('flower/flower_photos/' + filename), target_size)))
     i += 1
-    if(i == 400):
+    if(i == 200):
         break
 trainLab = np.array(trainLab, dtype=float)
 trainLab[:,:,:,0] /= 100
@@ -78,10 +80,10 @@ testLab[:,:,:,2] /= 128
 
 
 m = modelbuilder()
-m.save("model")
-epochs = 100
+m.save("model_try")
+epochs = 25
 batch_size = 40
-output = m.fit(trainLab[:400,:,:,:1], trainLab[:400,:,:,1:], epochs = epochs, batch_size=batch_size, use_multiprocessing=True, validation_split=0.2)
+output = m.fit(trainLab[:200,:,:,:1], trainLab[:200,:,:,1:], epochs = epochs, batch_size=batch_size, use_multiprocessing=True, validation_split=0.2)
 
 
 #Performance Graph
@@ -122,5 +124,5 @@ for i in range(len(out)):
     plt.imshow(img) 
     plt.colorbar()
     plt.grid(False)
-    plt.savefig(str(i) + 'try.png')
+    plt.savefig(str(i) + 'tryagain.png')
     plt.show()
