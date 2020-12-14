@@ -5,11 +5,12 @@ from sys import maxsize
 from time import time
 
 import keras.optimizers
+import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
 from keras.callbacks import EarlyStopping, ModelCheckpoint
 from keras.layers import Conv2D, Dense, MaxPooling2D, UpSampling2D
-from keras.layers.convolutional import Conv2DTranspose
+from keras.layers.convolutional import Conv1D, Conv2DTranspose
 from keras.layers.core import Flatten
 from keras.models import Sequential, load_model
 from PIL import Image
@@ -17,69 +18,6 @@ from PIL import Image
 from common import (colorDistance, convertToGrayscale, getImagePixels,
                     getSection)
 
-# validationSplit = 0.2
-# trainingSize = 400
-# trainingInputs = []
-# validationInputs = []
-# trainingExpected = []
-# validationExpected = []
-
-# trainingInputsDir = "grayscaleFlowers"
-# trainingExpectedDir = "flower_photos"
-# trainingEntries = os.listdir(trainingInputsDir)
-# for i in range(trainingSize):
-#     grayscalePixels = getImagePixels(trainingInputsDir, trainingEntries[i])
-#     expectedPixels = getImagePixels(trainingExpectedDir, trainingEntries[i])
-#     if i >= (1 - validationSplit) * trainingSize:
-#         validationInputs.append(grayscalePixels)
-#         validationExpected.append(expectedPixels)
-#     else:
-#         trainingInputs.append(grayscalePixels)
-#         trainingExpected.append(expectedPixels)
-
-# trainingInputs = np.array(trainingInputs, dtype=np.uint8) / 255
-# trainingExpected = np.array(trainingExpected, dtype=np.uint8) / 255
-# validationInputs = np.array(validationInputs, dtype=np.uint8) / 255
-# validationExpected = np.array(validationExpected, dtype=np.uint8) / 255
-# # validationExpected = validationExpected[1:validationExpected.shape[0] - 1, 1:validationExpected.shape[1] - 1, :]
-
-
-# model = Sequential()
-# # model.add(Dense(8, activation="relu", kernel_initializer="he_uniform", input_shape=(
-# #     trainingInputs.shape[1], trainingInputs.shape[2], trainingInputs.shape[3])))
-# model.add(Conv2D(8, (3, 3), activation='relu', kernel_initializer='he_uniform', padding='same', input_shape=(
-#     trainingInputs.shape[1], trainingInputs.shape[2], trainingInputs.shape[3])))
-# # model.add(MaxPooling2D((2, 2), padding='same'))
-# # model.add(Conv2D(8, (2, 2), activation='relu', kernel_initializer='he_uniform', padding='same'))
-# # # model.add(MaxPooling2D((2, 2), padding='same'))
-# # # model.add(Conv2D(8, (2, 2), activation='relu', kernel_initializer='he_uniform', padding='same'))
-# # model.add(UpSampling2D((2, 2), interpolation='bilinear'))
-# model.add(Conv2DTranspose(16, kernel_size=(3, 3), activation='relu', kernel_initializer='he_normal', padding="same"))
-# model.add(Conv2D(3, (2, 2), activation='sigmoid', padding='same'))
-
-# model.summary()
-# opt = keras.optimizers.Adam(learning_rate=0.1)
-# model.compile(loss='mse',
-#               optimizer=opt,
-#               metrics=['accuracy'])
-# es = EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=5)
-# mc = ModelCheckpoint('best_model.h5', monitor='val_accuracy', mode='max', verbose=1, save_best_only=True)
-# model.fit(trainingInputs, trainingExpected, batch_size=40, epochs=50,
-#           validation_data=(validationInputs, validationExpected), verbose=1, callbacks=[es, mc])
-# saved_model = load_model('best_model.h5')
-
-# testInputs = []
-# testDir = "testingimages"
-# testEntries = os.listdir(testDir)
-# for entry in testEntries:
-#     testInputs.append(convertToGrayscale(getImagePixels(testDir, entry, (256, 256))))
-# testInputs = np.array(testInputs, dtype=np.uint8) / 255.
-
-# testResults = saved_model.predict(testInputs) * 255.
-# for i in range(len(testResults)):
-#     result = np.array(testResults[i], dtype=np.uint8)
-#     image = Image.fromarray(result)
-#     image.save(os.path.join("doublyImprovedResults", "result" + str(i) + ".png"))
 
 def getColors():
     colorsFile = open("colors.txt", "r")
@@ -115,7 +53,7 @@ def getClusters(pixels, colors):
 
 if __name__ == "__main__":
     # colors = getColors()
-    trainingInputsDir = "grayscaleFlowers"
+    trainingInputsDir = "training"
     trainingExpectedDir = "flower_photos"
     trainingEntries = os.listdir(trainingInputsDir)
 
@@ -123,56 +61,86 @@ if __name__ == "__main__":
     validationSplit = 0.2
     trainingInputs = []
     trainingExpected = []
-    for i in range(numTrainingImages):
-        startTime = time()
-        grayscalePixels = getImagePixels(trainingInputsDir, trainingEntries[i])
-        expectedPixels = getImagePixels(trainingExpectedDir, trainingEntries[i])
-        for r in range(1, grayscalePixels.shape[0] - 1):
-            for c in range(1, grayscalePixels.shape[1] - 1):
-                section = getSection(r, c, grayscalePixels, True)
-                trainingInputs.append(section)
-                trainingExpected.append(expectedPixels[r, c])
-        print("Image", str(i), "setup took", str(time() - startTime), "seconds.")
+
+    pixels = getImagePixels(trainingInputsDir, "fuji.jpg")
+    leftPixels = pixels[:, :int(pixels.shape[1] / 2)]
+    leftGrayscalePixels = convertToGrayscale(leftPixels, True)
+
+    for r in range(1, leftGrayscalePixels.shape[0] - 1):
+        for c in range(1, leftGrayscalePixels.shape[1] - 1):
+            section = getSection(r, c, leftGrayscalePixels, True)
+            trainingInputs.append(section)
+            trainingExpected.append(leftPixels[r, c])
 
     trainingInputs = np.array(trainingInputs) / 255.0
     trainingExpected = np.array(trainingExpected) / 255.0
     print(trainingInputs.shape)
 
     model = Sequential()
-    model.add(Dense(10, activation="relu", input_shape=(9, 1)))
-    model.add(Dense(10, activation="relu"))
-    model.add(Dense(10, activation="relu"))
+    model.add(Dense(20, activation="relu", input_shape=(9, 1)))
+    model.add(Dense(20, activation="relu"))
+    model.add(Dense(20, activation="relu"))
+    # model.add(Conv1D(5, 3, strides=1, activation="relu"))
+    # model.add(Dense(10, activation="relu"))
+    # model.add(Dense(10, activation="relu"))
+    # model.add(Dense(10, activation="relu"))
     model.add(Flatten())
     model.add(Dense(3, activation="sigmoid"))
     model.summary()
 
     # opt = keras.optimizers.SGD(learning_rate=0.1)
-    model.compile(loss='mse', optimizer="adam", metrics=['accuracy'])
-    es = EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=3)
+    model.compile(loss='mse', optimizer="sgd", metrics=['accuracy'])
+    es = EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=8)
     mc = ModelCheckpoint('best_model.h5', monitor='val_accuracy', mode='max', verbose=1, save_best_only=True)
-    model.fit(trainingInputs, trainingExpected, batch_size=254**2, epochs=25,
-              validation_split=validationSplit, verbose=1, callbacks=[es, mc])
-    model = load_model('best_model.h5')
+    model.fit(trainingInputs, trainingExpected, batch_size=25, epochs=100,
+              validation_split=validationSplit, verbose=1, callbacks=[mc, es])
+    model = load_model('best_model-2.h5')
 
-    testingDir = "testingImages"
-    testingEntries = os.listdir(testingDir)
-    for entry in testingEntries:
-        testingInputs = []
-        pixels = convertToGrayscale(getImagePixels(testingDir, entry, (256, 256)))
-        for r in range(1, pixels.shape[0] - 1):
-            for c in range(1, pixels.shape[1] - 1):
-                testingInputs.append(getSection(r, c, pixels, True))
+    rightGrayscalePixels = convertToGrayscale(pixels[:, int(pixels.shape[1] / 2):])
+    testingInputs = []
+    for r in range(1, rightGrayscalePixels.shape[0] - 1):
+        for c in range(1, rightGrayscalePixels.shape[1] - 1):
+            section = getSection(r, c, rightGrayscalePixels, True)
+            testingInputs.append(section)
 
-        testingInputs = np.array(testingInputs) / 255.0
-        testingResults = model.predict(testingInputs)
-        recoloredImage = [[[] for j in range(254)] for i in range(254)]
-        for r in range(len(testingResults)):
-            result = np.array(testingResults[r]) * 255.0
-            recoloredImage[int(r / 254)][r % 254] = result
+    testingInputs = np.array(testingInputs) / 255.0
+    testingResults = model.predict(testingInputs)
+    i = 0
+    rightPixels = [[[] for j in range(rightGrayscalePixels.shape[1])] for i in range(rightGrayscalePixels.shape[0])]
+    for r in range(len(rightPixels)):
+        for c in range(len(rightPixels[0])):
+            if r == 0 or r == len(rightPixels) - 1 or c == 0 or c == len(rightPixels[0]) - 1:
+                rightPixels[r][c] = [0, 0, 0]
+                continue
+            rightPixels[r][c] = testingResults[i]
+            i += 1
+    rightPixels = np.array(rightPixels)
+    plt.imshow(rightPixels)
+    plt.savefig("r.png")
 
-        recoloredImage = np.array(recoloredImage, dtype=np.uint8)
-        image = Image.fromarray(recoloredImage)
-        image.save(os.path.join("doublyImprovedResults", entry+"-results.png"))
+    # --------------------------------
+    # image = Image.fromarray(rightPixels)
+    # image.save(os.path.join("doublyImprovedResults", "okay.png"))
+
+    # testingDir = "testingImages"
+    # testingEntries = os.listdir(testingDir)
+    # for entry in testingEntries:
+    #     testingInputs = []
+    #     pixels = convertToGrayscale(getImagePixels(testingDir, entry, (256, 256)))
+    #     for r in range(1, pixels.shape[0] - 1):
+    #         for c in range(1, pixels.shape[1] - 1):
+    #             testingInputs.append(getSection(r, c, pixels, True))
+
+    #     testingInputs = np.array(testingInputs) / 255.0
+    #     testingResults = model.predict(testingInputs)
+    #     recoloredImage = [[[] for j in range(254)] for i in range(254)]
+    #     for r in range(len(testingResults)):
+    #         result = np.array(testingResults[r]) * 255.0
+    #         recoloredImage[int(r / 254)][r % 254] = result
+
+    #     recoloredImage = np.array(recoloredImage, dtype=np.uint8)
+    #     image = Image.fromarray(recoloredImage)
+    #     image.save(os.path.join("doublyImprovedResults", entry+"-results.png"))
 
     # recoloredImage = np.array(recoloredImage, dtype=np.uint8)
     # image = Image.fromarray(recoloredImage)
