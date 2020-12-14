@@ -155,10 +155,10 @@ i = 0
 for images in results: 
     gray = color.gray2rgb(images[:, :, 0])
 
-    io.imsave('results/withText' + str(i + 1) + ".png", testTextImages[i])
-    io.imsave('results/detectedText' + str(i + 1) + ".png", gray)
+    io.imsave('results/withText' + str(i + 1) + ".png", (testTextImages[i] * 255).astype('uint8'))
+    io.imsave('results/detectedText' + str(i + 1) + ".png", (gray * 255).astype('uint8'), check_contrast=False)
     smoothed = smooth(testTextImages[i], gray[:, :, 0] / np.max(gray))
-    io.imsave('results/withoutText' + str(i + 1) + ".png", smoothed)
+    io.imsave('results/withoutText' + str(i + 1) + ".png", (smoothed * 255).astype('uint8'))
 
     # plt.imshow(gray)
     # plt.savefig('results/textDetected' + str(i + 1) + ".png")
