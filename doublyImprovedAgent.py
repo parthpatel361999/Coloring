@@ -77,16 +77,21 @@ if __name__ == "__main__":
     # print(trainingInputs.shape)
 
     model = Sequential()
-    model.add(Conv2D(16, 3, strides=1, padding="same", activation="relu", input_shape=leftGrayscalePixels.shape))
+    model.add(Conv2D(32, 3, strides=1, padding="same", activation="relu", input_shape=leftGrayscalePixels.shape))
+    model.add(Conv2D(32, 3, strides=1, padding="same", activation="relu", input_shape=leftGrayscalePixels.shape))
+    model.add(Conv2D(32, 3, strides=1, padding="same", activation="relu", input_shape=leftGrayscalePixels.shape))
+    model.add(Conv2D(32, 3, strides=1, padding="same", activation="relu", input_shape=leftGrayscalePixels.shape))
+    model.add(Conv2D(32, 3, strides=1, padding="same", activation="relu", input_shape=leftGrayscalePixels.shape))
+    model.add(Conv2D(32, 3, strides=1, padding="same", activation="relu", input_shape=leftGrayscalePixels.shape))
     model.add(Conv2D(3, 3, padding="same", activation="sigmoid"))
     model.summary()
 
     # opt = keras.optimizers.SGD(learning_rate=0.1)
-    model.compile(loss='mse', optimizer="rmsprop", metrics=['accuracy'])
-    es = EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=8)
-    mc = ModelCheckpoint('best_model-3.h5', monitor='val_accuracy', mode='max', verbose=1, save_best_only=True)
+    model.compile(loss='mse', optimizer="adam", metrics=['accuracy'])
+    #es = EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=8)
+    mc = ModelCheckpoint('best_model.h5', monitor='loss', mode='min', verbose=1, save_best_only=True)
     model.fit(np.array([leftGrayscalePixels]), np.array([leftPixels]) /
-              255., epochs=100,  verbose=1, callbacks=[mc, es])
+              255., epochs=2000,  verbose=1, callbacks=mc)
     # model = load_model('best_model-3.h5')
 
     rightGrayscalePixels = convertToGrayscale(pixels[:, int(pixels.shape[1] / 2):], True) / 255.
