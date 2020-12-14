@@ -64,65 +64,60 @@ if __name__ == "__main__":
 
     pixels = getImagePixels(trainingInputsDir, "fuji.jpg")
     leftPixels = pixels[:, :int(pixels.shape[1] / 2)]
-    leftGrayscalePixels = convertToGrayscale(leftPixels, True)
+    leftGrayscalePixels = convertToGrayscale(leftPixels, True) / 255.0
 
-    for r in range(1, leftGrayscalePixels.shape[0] - 1):
-        for c in range(1, leftGrayscalePixels.shape[1] - 1):
-            section = getSection(r, c, leftGrayscalePixels, True)
-            trainingInputs.append(section)
-            trainingExpected.append(leftPixels[r, c])
+    # for r in range(1, leftGrayscalePixels.shape[0] - 1):
+    #     for c in range(1, leftGrayscalePixels.shape[1] - 1):
+    #         section = getSection(r, c, leftGrayscalePixels, True)
+    #         trainingInputs.append(section)
+    #         trainingExpected.append(leftPixels[r, c])
 
-    trainingInputs = np.array(trainingInputs) / 255.0
-    trainingExpected = np.array(trainingExpected) / 255.0
-    print(trainingInputs.shape)
+    # trainingInputs = np.array(trainingInputs) / 255.0
+    # trainingExpected = np.array(trainingExpected) / 255.0
+    # print(trainingInputs.shape)
 
     model = Sequential()
-    model.add(Dense(20, activation="relu", input_shape=(9, 1)))
-    model.add(Dense(20, activation="relu"))
-    model.add(Dense(20, activation="relu"))
-    model.add(Dense(20, activation="relu"))
-    # model.add(Conv1D(5, 3, strides=1, activation="relu"))
-    # model.add(Dense(10, activation="relu"))
-    # model.add(Dense(10, activation="relu"))
-    # model.add(Dense(10, activation="relu"))
-    model.add(Flatten())
-    model.add(Dense(3, activation="sigmoid"))
+    model.add(Conv2D(16, 3, strides=1, padding="same", activation="relu", input_shape=leftGrayscalePixels.shape))
+    model.add(Conv2D(3, 3, padding="same", activation="sigmoid"))
     model.summary()
 
     # opt = keras.optimizers.SGD(learning_rate=0.1)
-    model.compile(loss='mse', optimizer="sgd", metrics=['accuracy'])
+    model.compile(loss='mse', optimizer="rmsprop", metrics=['accuracy'])
     es = EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=8)
-    mc = ModelCheckpoint('best_model-2.h5', monitor='val_accuracy', mode='max', verbose=1, save_best_only=True)
-    model.fit(trainingInputs, trainingExpected, batch_size=25, epochs=100,
-              validation_split=validationSplit, verbose=1, callbacks=[mc, es])
-    model = load_model('best_model-2.h5')
+    mc = ModelCheckpoint('best_model-3.h5', monitor='val_accuracy', mode='max', verbose=1, save_best_only=True)
+    model.fit(np.array([leftGrayscalePixels]), np.array([leftPixels]) /
+              255., epochs=100,  verbose=1, callbacks=[mc, es])
+    # model = load_model('best_model-3.h5')
 
-    rightGrayscalePixels = convertToGrayscale(pixels[:, int(pixels.shape[1] / 2):])
-    testingInputs = []
-    for r in range(1, rightGrayscalePixels.shape[0] - 1):
-        for c in range(1, rightGrayscalePixels.shape[1] - 1):
-            section = getSection(r, c, rightGrayscalePixels, True)
-            testingInputs.append(section)
+    rightGrayscalePixels = convertToGrayscale(pixels[:, int(pixels.shape[1] / 2):], True) / 255.
+    results = np.array(model.predict(np.array([rightGrayscalePixels])))[0] * 255.
+    image = Image.fromarray(results.astype(np.uint8))
+    image.save(os.path.join("doublyImprovedResults", "new.png"))
+    # testingInputs = []
+    # for r in range(1, rightGrayscalePixels.shape[0] - 1):
+    #     for c in range(1, rightGrayscalePixels.shape[1] - 1):
+    #         section = getSection(r, c, rightGrayscalePixels, True)
+    #         testingInputs.append(section)
 
-    testingInputs = np.array(testingInputs) / 255.0
-    testingResults = model.predict(testingInputs)
-    i = 0
-    rightPixels = [[[] for j in range(rightGrayscalePixels.shape[1])] for i in range(rightGrayscalePixels.shape[0])]
-    for r in range(len(rightPixels)):
-        for c in range(len(rightPixels[0])):
-            if r == 0 or r == len(rightPixels) - 1 or c == 0 or c == len(rightPixels[0]) - 1:
-                rightPixels[r][c] = [0, 0, 0]
-                continue
-            rightPixels[r][c] = testingResults[i]
-            i += 1
-    rightPixels = np.array(rightPixels) * 255.0
+    # testingInputs = np.array(testingInputs) / 255.0
+    # testingResults = model.predict(testingInputs)
+    # i = 0
+    # rightPixels = [[[] for j in range(rightGrayscalePixels.shape[1])] for i in range(rightGrayscalePixels.shape[0])]
+    # for r in range(len(rightPixels)):
+    #     for c in range(len(rightPixels[0])):
+    #         if r == 0 or r == len(rightPixels) - 1 or c == 0 or c == len(rightPixels[0]) - 1:
+    #             rightPixels[r][c] = [0, 0, 0]
+    #             continue
+    #         rightPixels[r][c] = testingResults[i]
+    #         i += 1
+    # rightPixels = np.array(rightPixels) * 255.0
 
-    # plt.imshow(rightPixels)
-    # plt.savefig("r.png")
+    # # plt.imshow(rightPixels)
+    # # plt.savefig("r.png")
 
-    # print(checkQuality2(pixels[1:pixels.shape[0] - 1, int(pixels.shape[1] / 2) + 1:pixels.shape[1] - 1], rightPixels))
-    image = Image.fromarray(rightPixels.astype(np.uint8))
-    image.save(os.path.join("doublyImprovedResults", "okay.png"))
+    # # print(checkQuality2(pixels[1:pixels.shape[0] - 1, int(pixels.shape[1] / 2) + 1:pixels.shape[1] - 1], rightPixels))
+    # image = Image.fromarray(rightPixels.astype(np.uint8))
+    # image.save(os.path.join("doublyImprovedResults", "okay.png"))
 
     # testingDir = "testingImages"
     # testingEntries = os.listdir(testingDir)
