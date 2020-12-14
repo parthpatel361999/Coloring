@@ -12,8 +12,8 @@ from keras.layers.core import Flatten
 from keras.models import Sequential, load_model
 from PIL import Image
 
-from common import (checkQuality2, colorDistance, convertToGrayscale,
-                    getImagePixels, getSection)
+from common import (checkQuality, checkQuality2, colorDistance,
+                    convertToGrayscale, getImagePixels, getSection)
 
 # testingDir = "testingImages"
 # testingEntries = os.listdir(testingDir)
@@ -25,6 +25,10 @@ from common import (checkQuality2, colorDistance, convertToGrayscale,
 #     print(entry + ":", str(checkQuality2(oP, nP)))
 
 op = getImagePixels("training", "fuji.jpg")
+op = op[:, :int(op.shape[1] / 2)]
+npix = getImagePixels("doublyImprovedResults", "left.png")
+print(checkQuality2(op, npix))
+op = getImagePixels("training", "fuji.jpg")
 op = op[:, int(op.shape[1] / 2):]
-npix = getImagePixels("doublyImprovedResults", "new.png")
+npix = getImagePixels("doublyImprovedResults", "right.png")
 print(checkQuality2(op, npix))

@@ -9,10 +9,12 @@ import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
 from keras.callbacks import EarlyStopping, ModelCheckpoint
+from keras.engine.saving import save_model
 from keras.layers import Conv2D, Dense, MaxPooling2D, UpSampling2D
 from keras.layers.convolutional import Conv1D, Conv2DTranspose
 from keras.layers.core import Flatten
 from keras.models import Sequential, load_model
+from keras.utils.vis_utils import plot_model
 from PIL import Image
 
 from common import (checkQuality2, colorDistance, convertToGrayscale,
@@ -77,23 +79,44 @@ if __name__ == "__main__":
     # print(trainingInputs.shape)
 
     model = Sequential()
-    model.add(Conv2D(16, 3, strides=1, padding="same", activation="relu", input_shape=leftGrayscalePixels.shape))
-    model.add(Conv2D(16, 3, padding="same", activation="relu"))
+    model.add(Conv2D(32, 3, strides=1, padding="same", activation="relu", input_shape=leftGrayscalePixels.shape))
+    model.add(Conv2D(32, 3, padding="same", activation="relu"))
+    model.add(Conv2D(32, 3, padding="same", activation="relu"))
     model.add(Conv2D(3, 3, padding="same", activation="sigmoid"))
     model.summary()
 
     # opt = keras.optimizers.SGD(learning_rate=0.1)
-    model.compile(loss='mse', optimizer="rmsprop", metrics=['accuracy'])
+    model.compile(loss='mse', optimizer="adam", metrics=['accuracy'])
     # es = EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=8)
     # mc = ModelCheckpoint('best_model-3.h5', monitor='accuracy', mode='max', verbose=1, save_best_only=True)
-    model.fit(np.array([leftGrayscalePixels]), np.array([leftPixels]) / 255., epochs=100,  verbose=1)
+    # model.fit(np.array([leftGrayscalePixels]), np.array([leftPixels]) / 255., epochs=1000,  verbose=1)
+    # save_model(model, "best_model.h5")
     #   , callbacks=[mc, es]
-    # model = load_model('best_model-3.h5')
+    model = load_model('best_model.h5')
 
-    rightGrayscalePixels = convertToGrayscale(pixels[:, int(pixels.shape[1] / 2):], True) / 255.
-    results = np.array(model.predict(np.array([rightGrayscalePixels])))[0] * 255.
-    image = Image.fromarray(results.astype(np.uint8))
-    image.save(os.path.join("doublyImprovedResults", "new.png"))
+    plot_model(model, to_file='model_plot.png', show_shapes=True, show_layer_names=True)
+
+    leftResults = np.array(model.predict(np.array([leftGrayscalePixels])))[0] * 255.
+    image = Image.fromarray(leftResults.astype(np.uint8))
+    image.save(os.path.join("doublyImprovedResults", "left.png"))
+
+    rightGrayscalePixels = np.fliplr(convertToGrayscale(pixels[:, int(pixels.shape[1] / 2):], True) / 255.)
+    rightResults = np.fliplr(np.array(model.predict(np.array([rightGrayscalePixels])))[0] * 255.)
+    image = Image.fromarray(rightResults.astype(np.uint8))
+    image.save(os.path.join("doublyImprovedResults", "right.png"))
+
+    recalculatedImageArray = [[[] for j in range(pixels.shape[1])]
+                              for i in range(pixels.shape[0])]
+    for r in range(len(recalculatedImageArray)):
+        for c in range(leftResults.shape[1]):
+            recalculatedImageArray[r][c] = leftResults[r][c]
+        for c in range(rightResults.shape[1]):
+            recalculatedImageArray[r][c + leftResults.shape[1]
+                                      ] = rightResults[r][c]
+    recalculatedImageArray = np.array(recalculatedImageArray, dtype=np.uint8)
+    image = Image.fromarray(recalculatedImageArray)
+    image.save(os.path.join("results", "doubly-improved-agent-results.png"))
+
     # testingInputs = []
     # for r in range(1, rightGrayscalePixels.shape[0] - 1):
     #     for c in range(1, rightGrayscalePixels.shape[1] - 1):
