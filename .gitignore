@@ -1,6 +1,6 @@
 .vscode/
 .idea/
 __pycache__/
-results/
-grayscaleFlowers/
 flower_photos/
+.DS_Store
+grayscaleFlowers/

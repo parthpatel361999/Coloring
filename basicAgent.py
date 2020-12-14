@@ -108,7 +108,7 @@ def basicAgent(originalPixels, grayscalePixels):
                                       ] = rightRecoloredPixels[r][c]
     recalculatedImageArray = np.array(recalculatedImageArray, dtype=np.uint8)
     image = Image.fromarray(recalculatedImageArray)
-    image.save(os.path.join("results", "basic-agent-results-.png"))
+    image.save(os.path.join("basicAgent", "results", "basic-agent-results-.png"))
 
 
 def kMeans(pixels, k, distance=colorDistance):
@@ -191,7 +191,3 @@ def kMeans(pixels, k, distance=colorDistance):
 if __name__ == "__main__":
     originalPixels = getImagePixels("training", "fuji.jpg")
     basicAgent(originalPixels, convertToGrayscale(originalPixels))
-
-    # op = getImagePixels("training", "fuji.jpg")
-    # np = getImagePixels("", "basic-agent-results.png")
-    # print(checkQuality(op, np))

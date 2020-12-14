@@ -266,7 +266,7 @@ def improvedAgent(originalPixels, grayscalePixels, iteration):
     plt.plot(x, validationErrorsSmooth, color="gold", label="Validation Error (Smoothed)", linewidth=3)
     plt.axvline(x=minValidationError, color='k', label="Validation Error Minimum (Smoothed)")
     plt.legend(loc="best")
-    plt.savefig("training-validation-stats.png")
+    plt.savefig(os.path.join("improvedAgent", "training", "training-validation-stats-" + str(iteration) + ".png"))
     plt.close(figure)
 
     startTime = time()
@@ -309,7 +309,7 @@ def improvedAgent(originalPixels, grayscalePixels, iteration):
                                       ] = rightRecoloredPixels[r][c]
     recalculatedImageArray = np.array(recalculatedImageArray, dtype=np.uint8)
     image = Image.fromarray(recalculatedImageArray)
-    image.save(os.path.join("results", "improved-agent-results-" + str(iteration) + ".png"))
+    image.save(os.path.join("improvedAgent", "results", "improved-agent-results-" + str(iteration) + ".png"))
     print("Overall took", str(time() - overallStartTime), "seconds.")
     return time() - overallStartTime
 
