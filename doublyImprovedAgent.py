@@ -15,8 +15,8 @@ from keras.layers.core import Flatten
 from keras.models import Sequential, load_model
 from PIL import Image
 
-from common import (colorDistance, convertToGrayscale, getImagePixels,
-                    getSection)
+from common import (checkQuality2, colorDistance, convertToGrayscale,
+                    getImagePixels, getSection)
 
 
 def getColors():
@@ -77,9 +77,9 @@ if __name__ == "__main__":
     print(trainingInputs.shape)
 
     model = Sequential()
-    model.add(Dense(20, activation="relu", input_shape=(9, 1)))
-    model.add(Dense(20, activation="relu"))
-    model.add(Dense(20, activation="relu"))
+    model.add(Dense(60, activation="relu", input_shape=(9, 1)))
+    model.add(Dense(60, activation="relu"))
+    model.add(Dense(60, activation="relu"))
     # model.add(Conv1D(5, 3, strides=1, activation="relu"))
     # model.add(Dense(10, activation="relu"))
     # model.add(Dense(10, activation="relu"))
@@ -91,7 +91,7 @@ if __name__ == "__main__":
     # opt = keras.optimizers.SGD(learning_rate=0.1)
     model.compile(loss='mse', optimizer="sgd", metrics=['accuracy'])
     es = EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=8)
-    mc = ModelCheckpoint('best_model.h5', monitor='val_accuracy', mode='max', verbose=1, save_best_only=True)
+    mc = ModelCheckpoint('best_model-2.h5', monitor='val_accuracy', mode='max', verbose=1, save_best_only=True)
     model.fit(trainingInputs, trainingExpected, batch_size=25, epochs=100,
               validation_split=validationSplit, verbose=1, callbacks=[mc, es])
     model = load_model('best_model-2.h5')
@@ -114,13 +114,14 @@ if __name__ == "__main__":
                 continue
             rightPixels[r][c] = testingResults[i]
             i += 1
-    rightPixels = np.array(rightPixels)
-    plt.imshow(rightPixels)
-    plt.savefig("r.png")
+    rightPixels = np.array(rightPixels) * 255.0
 
-    # --------------------------------
-    # image = Image.fromarray(rightPixels)
-    # image.save(os.path.join("doublyImprovedResults", "okay.png"))
+    # plt.imshow(rightPixels)
+    # plt.savefig("r.png")
+
+    # print(checkQuality2(pixels[1:pixels.shape[0] - 1, int(pixels.shape[1] / 2) + 1:pixels.shape[1] - 1], rightPixels))
+    image = Image.fromarray(rightPixels.astype(np.uint8))
+    image.save(os.path.join("doublyImprovedResults", "okay.png"))
 
     # testingDir = "testingImages"
     # testingEntries = os.listdir(testingDir)
