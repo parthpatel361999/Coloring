@@ -90,7 +90,7 @@ for filename in os.listdir('flower/flower_photos'):
     c = 'rgb(' + str(randint(0, 255)) + ',' + str(randint(0, 255)) + ',' + str(randint(0, 255)) + ')'
     images = drawText('flower/flower_photos/' + filename, fontsize, message, target_size, c)
     textImages.append(np.array(images[0], dtype = float))
-    temp = np.zeros(shape = (256, 256, 3), dtype=float)
+    temp = np.zeros(shape = (256, 256, 3), dtype = float)
     x0 = images[1][0]
     y0 = images[1][1]
     x1 = images[1][2]
@@ -108,7 +108,6 @@ for filename in os.listdir('testingImages'):
     message = ''.join(choices(ascii_uppercase, k = 4))
     c = 'rgb(' + str(randint(0, 255)) + ',' + str(randint(0, 255)) + ',' + str(randint(0, 255)) + ')'
     images = drawText('testingImages/' + filename, fontsize, message, target_size, b)
-    images[0].save('testingImagesWithText/' + filename)
     testTextImages.append(np.array(images[0], dtype = float))
     i += 1
     if(i == 15):
@@ -155,10 +154,10 @@ i = 0
 for images in results: 
     gray = color.gray2rgb(images[:, :, 0])
 
-    io.imsave('results/withText' + str(i + 1) + ".png", (testTextImages[i] * 255).astype('uint8'))
-    io.imsave('results/detectedText' + str(i + 1) + ".png", (gray * 255).astype('uint8'), check_contrast=False)
+    io.imsave('testingImagesWithText/' + str(i + 1) + ".png", (testTextImages[i] * 255).astype('uint8'))
+    io.imsave('testingImagesDetectedText/' + str(i + 1) + ".png", (gray * 255).astype('uint8'), check_contrast=False)
     smoothed = smooth(testTextImages[i], gray[:, :, 0] / np.max(gray))
-    io.imsave('results/withoutText' + str(i + 1) + ".png", (smoothed * 255).astype('uint8'))
+    io.imsave('testingImagesRemovedText/' + str(i + 1) + ".png", (smoothed * 255).astype('uint8'))
 
     # plt.imshow(gray)
     # plt.savefig('results/textDetected' + str(i + 1) + ".png")
