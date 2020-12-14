@@ -114,12 +114,12 @@ def getClusters(pixels, colors):
 
 
 if __name__ == "__main__":
-    colors = getColors()
+    # colors = getColors()
     trainingInputsDir = "grayscaleFlowers"
     trainingExpectedDir = "flower_photos"
     trainingEntries = os.listdir(trainingInputsDir)
 
-    numTrainingImages = 5
+    numTrainingImages = 10
     validationSplit = 0.2
     trainingInputs = []
     trainingExpected = []
@@ -127,55 +127,53 @@ if __name__ == "__main__":
         startTime = time()
         grayscalePixels = getImagePixels(trainingInputsDir, trainingEntries[i])
         expectedPixels = getImagePixels(trainingExpectedDir, trainingEntries[i])
-        clusters = getClusters(expectedPixels, colors)
-        for j in range(len(colors)):
-            cluster = clusters[j]
-            expectedVector = np.zeros(shape=(colors.shape[0]))
-            expectedVector[j] = 1
-            for (r, c) in cluster:
-                if r == 0 or r == expectedPixels.shape[0] - 1 or c == 0 or c == expectedPixels.shape[1] - 1:
-                    continue
-                trainingInputs.append(getSection(r, c, grayscalePixels, True) / 255.0)
-                trainingExpected.append(expectedVector)
+        for r in range(1, grayscalePixels.shape[0] - 1):
+            for c in range(1, grayscalePixels.shape[1] - 1):
+                section = getSection(r, c, grayscalePixels, True)
+                trainingInputs.append(section)
+                trainingExpected.append(expectedPixels[r, c])
         print("Image", str(i), "setup took", str(time() - startTime), "seconds.")
 
-    trainingInputs = np.array(trainingInputs, dtype=np.uint8)
-    trainingExpected = np.array(trainingExpected, dtype=np.uint8)
+    trainingInputs = np.array(trainingInputs) / 255.0
+    trainingExpected = np.array(trainingExpected) / 255.0
     print(trainingInputs.shape)
 
     model = Sequential()
-    model.add(Dense(20, activation="relu", input_shape=(9, 1)))
-    # model.add(Dense(5, activation="relu"))
+    model.add(Dense(10, activation="relu", input_shape=(9, 1)))
+    model.add(Dense(10, activation="relu"))
+    model.add(Dense(10, activation="relu"))
     model.add(Flatten())
-    model.add(Dense(colors.shape[0], activation="softmax"))
+    model.add(Dense(3, activation="sigmoid"))
     model.summary()
 
     # opt = keras.optimizers.SGD(learning_rate=0.1)
-    model.compile(loss='categorical_crossentropy', optimizer="adam", metrics=['accuracy'])
-    es = EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=5)
+    model.compile(loss='mse', optimizer="adam", metrics=['accuracy'])
+    es = EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=3)
     mc = ModelCheckpoint('best_model.h5', monitor='val_accuracy', mode='max', verbose=1, save_best_only=True)
-    model.fit(trainingInputs, trainingExpected, batch_size=40, epochs=15,
+    model.fit(trainingInputs, trainingExpected, batch_size=254**2, epochs=25,
               validation_split=validationSplit, verbose=1, callbacks=[es, mc])
     model = load_model('best_model.h5')
 
-    testingInputs = []
     testingDir = "testingImages"
     testingEntries = os.listdir(testingDir)
     for entry in testingEntries:
+        testingInputs = []
         pixels = convertToGrayscale(getImagePixels(testingDir, entry, (256, 256)))
         for r in range(1, pixels.shape[0] - 1):
             for c in range(1, pixels.shape[1] - 1):
-                testingInputs.append(getSection(r, c, pixels, True) / 255.0)
-        break
-    testingInputs = np.array(testingInputs, dtype=np.uint8)
+                testingInputs.append(getSection(r, c, pixels, True))
 
-    testingResults = model.predict(testingInputs)
-    recoloredImage = [[[] for j in range(254)] for i in range(254)]
-    for r in range(len(testingResults)):
-        result = np.array(testingResults[r])
-        colorIndex = result.argmax()
-        recoloredImage[int(r / 254)][r % 254] = colors[colorIndex]
+        testingInputs = np.array(testingInputs) / 255.0
+        testingResults = model.predict(testingInputs)
+        recoloredImage = [[[] for j in range(254)] for i in range(254)]
+        for r in range(len(testingResults)):
+            result = np.array(testingResults[r]) * 255.0
+            recoloredImage[int(r / 254)][r % 254] = result
 
-    recoloredImage = np.array(recoloredImage, dtype=np.uint8)
-    image = Image.fromarray(recoloredImage)
-    image.save(os.path.join("doublyImprovedResults", "new-results-.png"))
+        recoloredImage = np.array(recoloredImage, dtype=np.uint8)
+        image = Image.fromarray(recoloredImage)
+        image.save(os.path.join("doublyImprovedResults", entry+"-results.png"))
+
+    # recoloredImage = np.array(recoloredImage, dtype=np.uint8)
+    # image = Image.fromarray(recoloredImage)
+    # image.save(os.path.join("doublyImprovedResults", "new-results.png"))

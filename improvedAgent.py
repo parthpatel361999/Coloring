@@ -260,11 +260,11 @@ def improvedAgent(originalPixels, grayscalePixels, iteration):
     trainingErrorsSmooth = gaussian_filter1d(trainingErrors, smoothingFactor)
     validationErrorsSmooth = gaussian_filter1d(validationErrors, smoothingFactor)
     figure = plt.figure(figsize=((20., 8.)))
-    plt.scatter(x, trainingErrors, s=1, color="blue")
-    plt.scatter(x, validationErrors, s=1, color="red")
-    plt.plot(x, trainingErrorsSmooth, color="green", label="Training Error", linewidth=3)
-    plt.plot(x, validationErrorsSmooth, color="gold", label="Validation Error", linewidth=3)
-    plt.axvline(x=minValidationError, color='k', label="Validation Error Minimum")
+    plt.scatter(x, trainingErrors, s=1, color="blue", label="Training Error")
+    plt.scatter(x, validationErrors, s=1, color="red", label="Validation Error")
+    plt.plot(x, trainingErrorsSmooth, color="green", label="Training Error (Smoothed)", linewidth=3)
+    plt.plot(x, validationErrorsSmooth, color="gold", label="Validation Error (Smoothed)", linewidth=3)
+    plt.axvline(x=minValidationError, color='k', label="Validation Error Minimum (Smoothed)")
     plt.legend(loc="best")
     plt.savefig("training-validation-stats.png")
     plt.close(figure)
@@ -316,7 +316,7 @@ def improvedAgent(originalPixels, grayscalePixels, iteration):
 
 if __name__ == "__main__":
     originalPixels = getImagePixels("training", "fuji.jpg")
-    iterations = 50
+    iterations = 1
     overallTrainingError = 0
     overallTestingError = 0
     overallTime = 0
