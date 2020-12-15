@@ -14,8 +14,11 @@ from tensorflow.keras import layers
 from tensorflow.keras.models import Sequential
 
 
-# Define function to build a sequential TensorFlow model
 def modelbuilder():
+    """
+    Builds a sequential TensorFlow model
+
+    """
     model = Sequential()
     # Add a convolution layer with with a sigmoid activation function
     model.add(layers.Conv2D(1, (2, 2), strides=(1, 1), activation='sigmoid', padding='same', input_shape=(256, 256, 3)))
@@ -23,10 +26,12 @@ def modelbuilder():
     model.summary()
     return model
 
-# Define a function to draw customized text on images and track the position of the text
-
 
 def drawText(filepath, fontsize, text, target_size, color):
+    """
+    Draws customized text on images and track the position of the text
+
+    """
     image = Image.open(filepath)
     image = image.resize(target_size)
     draw = ImageDraw.Draw(image)
@@ -43,10 +48,12 @@ def drawText(filepath, fontsize, text, target_size, color):
     y0 = y + 0.5 * fontsize - 16
     return image, (int(x0), int(y0), int(x1), int(y1))
 
-# Define a function to return the neighboring pixels of a given pixel with a buffer size
-
 
 def getNeighbors(r, c, buffer):
+    """
+    Returns the neighboring pixels of a given pixel with a buffer size
+
+    """
     neighbors = [(r - buffer, c - buffer), (r - buffer, c), (r - buffer, c + buffer), (r, c - buffer),
                  (r, c + buffer), (r + buffer, c - buffer), (r + buffer, c), (r + buffer, c + buffer)]
     section = []
@@ -57,10 +64,12 @@ def getNeighbors(r, c, buffer):
             section.append([nR, nC])
     return section
 
-# Define a function to blend the text on an image with its background
-
 
 def smooth(rgb_with_text, gray_detected_text):
+    """
+    Blends the text on an image with its background
+
+    """
     detectedPixels = []
 
     # Compile a list of pixels that need to be blended
@@ -129,7 +138,7 @@ def inpainting(modelFilePath=os.path.join("inpainting", 'test_model_S500E500.h5'
         if(i == size):
             break
 
-    # Retriece and process the images for the testing set
+    # Retrieve and process the images for the testing set
     i = 0
     for filename in os.listdir(os.path.join("inpainting", "testingImages")):
         # Radnomly generate a 4 letter word to be overlaid on an image
