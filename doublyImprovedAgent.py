@@ -21,11 +21,13 @@ def buildModel(inputShape):
 
     """
     model = Sequential()
-    model.add(Conv2D(16, 7, strides=1, padding="same", activation="relu", input_shape=inputShape))
-    model.add(Conv2D(16, 7, strides=1, padding="same", activation="relu"))
-    model.add(Conv2D(16, 7, strides=1, padding="same", activation="relu"))
-    model.add(Conv2D(16, 7, strides=1, padding="same", activation="relu"))
-    model.add(Conv2D(3, 7, padding="same", activation="sigmoid"))
+    model.add(Conv2D(32, 3, strides=1, padding="same", activation="relu", input_shape=inputShape))
+    model.add(Conv2D(32, 3, strides=1, padding="same", activation="relu"))
+    model.add(Conv2D(32, 3, strides=1, padding="same", activation="relu"))
+    model.add(Conv2D(32, 3, strides=1, padding="same", activation="relu"))
+    model.add(Conv2D(32, 3, strides=1, padding="same", activation="relu"))
+    model.add(Conv2D(32, 3, strides=1, padding="same", activation="relu"))
+    model.add(Conv2D(3, 3, padding="same", activation="sigmoid"))
     model.summary()
     model.compile(loss='mse', optimizer="adam", metrics=['accuracy'])
     return model
@@ -57,17 +59,17 @@ def doublyImprovedAgent(originalPixels, grayscalePixels, modelFilePath, loadMode
         model = load_model(modelFilePath)
 
     plot_model(model, to_file=os.path.join("doublyImprovedAgent",
-                                           "model-test.png"), show_shapes=True, show_layer_names=True)
+                                           "model.png"), show_shapes=True, show_layer_names=True)
 
     leftResults = np.array(model.predict(np.array([leftGrayscalePixels])))[0] * 255.0
     image = Image.fromarray(leftResults.astype(np.uint8))
-    image.save(os.path.join("doublyImprovedAgent", "results", "doubly-improved-agent-training-test-results.png"))
+    image.save(os.path.join("doublyImprovedAgent", "results", "doubly-improved-agent-training-results.png"))
 
     rightGrayscalePixels = np.fliplr(convertToGrayscale(
         originalPixels[:, int(originalPixels.shape[1] / 2):], True) / 255.0)
     rightResults = np.fliplr(np.array(model.predict(np.array([rightGrayscalePixels])))[0] * 255.0)
     image = Image.fromarray(rightResults.astype(np.uint8))
-    image.save(os.path.join("doublyImprovedAgent", "results", "doubly-improved-agent-testing-test-results.png"))
+    image.save(os.path.join("doublyImprovedAgent", "results", "doubly-improved-agent-testing-results.png"))
 
     recalculatedImageArray = [[[] for j in range(originalPixels.shape[1])]
                               for i in range(originalPixels.shape[0])]
@@ -79,11 +81,11 @@ def doublyImprovedAgent(originalPixels, grayscalePixels, modelFilePath, loadMode
                                       ] = rightResults[r][c]
     recalculatedImageArray = np.array(recalculatedImageArray, dtype=np.uint8)
     image = Image.fromarray(recalculatedImageArray)
-    image.save(os.path.join("doublyImprovedAgent", "results", "doubly-improved-agent-overall-test-results.png"))
+    image.save(os.path.join("doublyImprovedAgent", "results", "doubly-improved-agent-overall-results.png"))
 
 
 if __name__ == "__main__":
     originalPixels = getImagePixels("training", "fuji.jpg")
     doublyImprovedAgent(originalPixels,
                         convertToGrayscale(originalPixels, True),
-                        os.path.join("doublyImprovedAgent", "best_model-test.h5"))
+                        os.path.join("doublyImprovedAgent", "best_model.h5"))
