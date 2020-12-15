@@ -117,13 +117,13 @@ def inpainting(modelFilePath=os.path.join("inpainting", 'test_model_S500E500.h5'
 
     # Retrieve and process the images for the training and validation set
     i = 0
-    for filename in os.listdir(os.path.join("inpainting", "flower", "flower_photos")):
+    for filename in os.listdir(os.path.join("inpainting", "flower_photos")):
         # Radnomly generate a 4 letter word to be overlaid on an image
         message = ''.join(choices(ascii_uppercase, k=4))
         # Randomly select a color for the font
         c = 'rgb(' + str(randint(0, 255)) + ',' + str(randint(0, 255)) + ',' + str(randint(0, 255)) + ')'
         # Draw the words on the images
-        images = drawText(os.path.join("inpainting", "flower", "flower_photos",
+        images = drawText(os.path.join("inpainting", "flower_photos",
                                        filename), fontsize, message, target_size, c)
         textImages.append(np.array(images[0], dtype=float))
         # Keep track of the location of the word for each image
@@ -216,3 +216,28 @@ def inpainting(modelFilePath=os.path.join("inpainting", 'test_model_S500E500.h5'
         i += 1
 
     return
+
+if __name__ == "__main__":
+    '''
+    To load our best model and predict with it, run 'inpainting(loadModel=True)'.
+    - The training images are stored in inpainting/flower_photos
+    - The testing images are stored in inpainting/testingImages
+    - The testing images with overlaid text are stored in inpainting/testingImagesWithText
+    - The testing detected text images are stored in inpainting/testingImagesDetectedText
+    - The testing detected text images with 92% threshold are stored in inpainting/bwThreshold
+    - The testing images with removed text are stored in inpainting/testingImagesWithRemovedText
+    '''
+    inpainting(loadModel=True)
+
+    '''
+    To train a new model and predict with it, run 'inpainting(modelFilePath='inpainting/m.h5', loadModel=False)'.
+    - The newly trained model is stored as m.h5
+    - The training images are stored in inpainting/flower_photos
+    - The testing images are stored in inpainting/testingImages
+    - The testing images with overlaid text are stored in inpainting/testingImagesWithText
+    - The testing detected text images are stored in inpainting/testingImagesDetectedText
+    - The testing detected text images with 92% threshold are stored in inpainting/bwThreshold
+    - The testing images with removed text are stored in inpainting/testingImagesWithRemovedText
+    '''
+    # inpainting(modelFilePath='inpainting/m.h5', loadModel=False)
+    
