@@ -6,6 +6,10 @@ from PIL import Image
 
 
 def getImagePixels(directory, fileName, resize=None):
+    """
+    Returns the RGB values for all the pixels of an image file (after resizing the image if necessary)
+
+    """
     filePath = os.path.join(directory, fileName)
     image = Image.open(filePath)
     if resize is not None:
@@ -14,6 +18,10 @@ def getImagePixels(directory, fileName, resize=None):
 
 
 def convertToGrayscale(pixels, singleValue=False):
+    """
+    Converts the given pixels to grayscale
+
+    """
     grayscalePixels = [[[] for j in range(pixels.shape[1])] for i in range(pixels.shape[0])]
     for i in range(pixels.shape[0]):
         for j in range(pixels.shape[1]):
@@ -24,12 +32,20 @@ def convertToGrayscale(pixels, singleValue=False):
 
 
 def colorDistance(color1, color2):
+    """
+    Calculates the distance between 2 colors 
+
+    """
     intColor1 = np.array(color1, dtype=int)
     intColor2 = np.array(color2, dtype=int)
     return sqrt(2 * (intColor1[0] - intColor2[0])**2 + 4 * (intColor1[1] - intColor2[1])**2 + 3 * (intColor1[2] - intColor2[2])**2)
 
 
 def getSection(r, c, pixels, singleValue=False):
+    """
+    Returns the RGB values for a 3x3 section surrounding a given pixel
+
+    """
     neighbors = [(r - 1, c - 1), (r - 1, c), (r - 1, c + 1), (r, c - 1),
                  (r, c), (r, c + 1), (r + 1, c - 1), (r + 1, c), (r + 1, c + 1)]
     section = []
@@ -39,31 +55,23 @@ def getSection(r, c, pixels, singleValue=False):
     return np.array(section, dtype=np.uint8)
 
 
-def checkQuality(originalPixels, newPixels):
+def checkQualityOfImage(originalPixels, newPixels):
+    """
+    Divides the given pixels into halves and compares these halves
+
+    """
     leftOriginalPixels = originalPixels[:, :int(originalPixels.shape[1] / 2)]
     leftNewPixels = newPixels[:, :int(newPixels.shape[1] / 2)]
     rightOriginalPixels = originalPixels[:, int(originalPixels.shape[1] / 2):]
     rightNewPixels = newPixels[:, int(newPixels.shape[1] / 2):]
-    totalDistanceL = 0
-    numPixelsL = 0
-    totalDistanceR = 0
-    numPixelsR = 0
-    for r in range(leftOriginalPixels.shape[0]):
-        for c in range(leftOriginalPixels.shape[1]):
-            if r == 0 or r == leftOriginalPixels.shape[0] - 1 or c == 0 or c == leftOriginalPixels.shape[1] - 1:
-                continue
-            totalDistanceL += colorDistance(leftOriginalPixels[r, c], leftNewPixels[r, c])
-            numPixelsL += 1
-    for r in range(rightOriginalPixels.shape[0]):
-        for c in range(rightOriginalPixels.shape[1]):
-            if r == 0 or r == rightOriginalPixels.shape[0] - 1 or c == 0 or c == rightOriginalPixels.shape[1] - 1:
-                continue
-            totalDistanceR += colorDistance(rightOriginalPixels[r, c], rightNewPixels[r, c])
-            numPixelsR += 1
-    return totalDistanceL/numPixelsL, totalDistanceR/numPixelsR
+    return ((checkQualityOfSection(leftOriginalPixels, leftNewPixels), checkQualityOfSection(rightOriginalPixels, rightNewPixels)))
 
 
-def checkQuality2(originalPixels, newPixels):
+def checkQualityOfSection(originalPixels, newPixels):
+    """
+    Returns average color distance between pixels in originalPixels list and newPixels list
+
+    """
     totalDistance = 0
     numPixels = 0
     for r in range(originalPixels.shape[0]):
